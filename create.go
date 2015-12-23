@@ -19,10 +19,6 @@ import (
 )
 
 func Create(name string, blockCount, blockSize int64) (*ReadWriter, error) {
-	if blockCount&0x3f != 0 {
-		return nil, fmt.Errorf("blockCount of %d is not a multiple of 64", blockCount)
-	}
-
 	if blockSize&0x3f != 0 {
 		return nil, fmt.Errorf("blockSize of %d is not a multiple of 64", blockSize)
 	}
