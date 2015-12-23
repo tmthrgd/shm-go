@@ -91,9 +91,9 @@ func CreateSimplex(name string, blockCount, blockSize int64) (*ReadWriteCloser, 
 	}
 
 	return &ReadWriteCloser{
-		read_shared:  shared,
-		write_shared: shared,
-		size:         size,
+		readShared:  shared,
+		writeShared: shared,
+		size:        size,
 	}, nil
 }
 
@@ -173,8 +173,8 @@ func CreateDuplex(name string, blockCount, blockSize int64) (*ReadWriteCloser, e
 	}
 
 	return &ReadWriteCloser{
-		read_shared:  (*C.shared_mem_t)(addr),
-		write_shared: (*C.shared_mem_t)(unsafe.Pointer(uintptr(addr) + sharedSize)),
-		size:         size,
+		readShared:  (*C.shared_mem_t)(addr),
+		writeShared: (*C.shared_mem_t)(unsafe.Pointer(uintptr(addr) + sharedSize)),
+		size:        size,
 	}, nil
 }
