@@ -13,11 +13,13 @@ package main
 import "C"
 
 import (
+	"fmt"
 	"golang.org/x/sys/unix"
+	"os"
 	"unsafe"
 )
 
-func OpenSimplex(name string) (ReadWriteCloser, error) {
+func OpenSimplex(name string) (*ReadWriteCloser, error) {
 	shmName := C.CString(name)
 	defer C.free(unsafe.Pointer(shmName))
 
@@ -35,7 +37,7 @@ func OpenSimplex(name string) (ReadWriteCloser, error) {
 		return nil, err
 	}
 
-	shared := (*C.shared_mem_t)(unsafe.Pointer(addr))
+	shared := (*C.shared_mem_t)(addr)
 	blockCount, blockSize := shared.block_count, shared.block_size
 
 	if _, err = C.munmap(addr, C.size_t(sharedHeaderSize)); err != nil {
@@ -49,25 +51,24 @@ func OpenSimplex(name string) (ReadWriteCloser, error) {
 		return nil, err
 	}
 
-	shared = (*C.shared_mem_t)(unsafe.Pointer(addr))
+	fmt.Fprintf(os.Stderr, "mmap mapped %d bytes to %p\n", size, addr)
 
-	var closed int64
-	return &readWriter{
-		shared: shared,
-		size:   size,
-
-		closed: &closed,
+	shared = (*C.shared_mem_t)(addr)
+	return &ReadWriteCloser{
+		read_shared:  shared,
+		write_shared: shared,
+		size:         size,
 	}, nil
 }
 
-func OpenDuplex(name string) (Reader, WriteCloser, error) {
+func OpenDuplex(name string) (*ReadWriteCloser, error) {
 	shmName := C.CString(name)
 	defer C.free(unsafe.Pointer(shmName))
 
 	fd, err := C.shm_open(shmName, C.O_RDWR, 0)
 
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	defer unix.Close(int(fd))
@@ -75,32 +76,30 @@ func OpenDuplex(name string) (Reader, WriteCloser, error) {
 	addr, err := C.mmap(nil, C.size_t(sharedHeaderSize), C.PROT_READ, C.MAP_SHARED, fd, 0)
 
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	shared := (*C.shared_mem_t)(unsafe.Pointer(addr))
 	blockCount, blockSize := shared.block_count, shared.block_size
 
 	if _, err = C.munmap(addr, C.size_t(sharedHeaderSize)); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	sharedSize := sharedHeaderSize + (blockHeaderSize+uintptr(blockSize))*uintptr(blockCount)
-	addr, err = C.mmap(nil, C.size_t(2*sharedSize), C.PROT_READ|C.PROT_WRITE, C.MAP_SHARED, fd, 0)
+	size := 2 * sharedSize
+
+	addr, err = C.mmap(nil, C.size_t(size), C.PROT_READ|C.PROT_WRITE, C.MAP_SHARED, fd, 0)
 
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	var closed int64
-	return &readWriter{
-			shared: (*C.shared_mem_t)(unsafe.Pointer(uintptr(addr) + sharedSize)),
+	fmt.Fprintf(os.Stderr, "mmap mapped %d bytes to %p\n", size, addr)
 
-			closed: &closed,
-		}, &readWriter{
-			shared: (*C.shared_mem_t)(unsafe.Pointer(addr)),
-			size:   2 * sharedSize,
-
-			closed: &closed,
-		}, nil
+	return &ReadWriteCloser{
+		read_shared:  (*C.shared_mem_t)(unsafe.Pointer(uintptr(addr) + sharedSize)),
+		write_shared: (*C.shared_mem_t)(addr),
+		size:         size,
+	}, nil
 }

@@ -26,8 +26,7 @@ const (
 )
 
 var (
-	ErrNotOwner          = errors.New("not owner of shared memory")
-	ErrNotCloser         = errors.New("does not implement type of Closer")
+	errNotMultipleOf64   = errors.New("blockSize is not a multiple of 64")
 	errInvalidBlockIndex = errors.New("invalid block index")
 )
 
@@ -113,20 +112,20 @@ func main() {
 	done := make(chan struct{}, 1)
 
 	if isServer {
-		reader, writer, err := CreateDuplex(shmName, 1024, 8192)
+		rw, err := CreateDuplex(shmName, 1024, 8192)
 		must("Create", err)
-		closer = reader
+		closer = rw
 
 		go func() {
 			for {
-				_, err := io.Copy(os.Stdout, io.TeeReader(reader, writer))
+				_, err := io.Copy(os.Stdout, io.TeeReader(rw, rw))
 				must("io.Copy", err)
 			}
 		}()
 	} else {
-		reader, writer, err := OpenDuplex(shmName)
+		rw, err := OpenDuplex(shmName)
 		must("Open", err)
-		closer = writer
+		closer = rw
 
 		oldState, err := terminal.MakeRaw(syscall.Stdin)
 		must("terminal.MakeRaw", err)
@@ -136,7 +135,7 @@ func main() {
 
 		go func() {
 			for {
-				_, err := io.Copy(term, reader)
+				_, err := io.Copy(term, rw)
 				must("io.Copy", err)
 			}
 		}()
@@ -152,7 +151,7 @@ func main() {
 					return
 				}
 
-				_, err = io.WriteString(writer, line+"\n")
+				_, err = io.WriteString(rw, line+"\n")
 				must("io.WriteString", err)
 			}
 		}()
