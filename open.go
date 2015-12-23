@@ -29,17 +29,30 @@ func Open(name string) (*ReadWriter, error) {
 
 	defer unix.Close(int(fd))
 
-	l := unsafe.Sizeof(C.shared_mem_t{})
-	addr, err := C.mmap(nil, C.size_t(l), C.PROT_READ|C.PROT_WRITE, C.MAP_SHARED, fd, 0)
+	addr, err := C.mmap(nil, C.size_t(sharedHeaderSize), C.PROT_READ, C.MAP_SHARED, fd, 0)
 
 	if err != nil {
 		return nil, err
 	}
 
 	shared := (*C.shared_mem_t)(unsafe.Pointer(addr))
+	blockCount, blockSize := shared.block_count, shared.block_size
+
+	if _, err = C.munmap(addr, C.size_t(sharedHeaderSize)); err != nil {
+		return nil, err
+	}
+
+	size := sharedHeaderSize + (blockHeaderSize+uintptr(blockSize))*uintptr(blockCount)
+	addr, err = C.mmap(nil, C.size_t(size), C.PROT_READ|C.PROT_WRITE, C.MAP_SHARED, fd, 0)
+
+	if err != nil {
+		return nil, err
+	}
+
+	shared = (*C.shared_mem_t)(unsafe.Pointer(addr))
 	return &ReadWriter{
 		shared: shared,
-		len:    l,
+		len:    size,
 		name:   "",
 	}, nil
 }

@@ -18,7 +18,22 @@ import (
 	"unsafe"
 )
 
-func Create(name string) (*ReadWriter, error) {
+func Create(name string, blockCount, blockSize int64) (*ReadWriter, error) {
+	if blockCount&0x3f != 0 {
+		return nil, fmt.Errorf("blockCount of %d is not a multiple of 64", blockCount)
+	}
+
+	if blockSize&0x3f != 0 {
+		return nil, fmt.Errorf("blockSize of %d is not a multiple of 64", blockSize)
+	}
+
+	fullBlockSize := blockHeaderSize + uintptr(blockSize)
+	size := sharedHeaderSize + fullBlockSize*uintptr(blockCount)
+
+	if size > 1<<30 {
+		return nil, fmt.Errorf("invalid total memory size of %d, maximum allowed is %d", size, 1<<30)
+	}
+
 	nameC := C.CString(name)
 	defer C.free(unsafe.Pointer(nameC))
 
@@ -30,23 +45,21 @@ func Create(name string) (*ReadWriter, error) {
 
 	defer unix.Close(int(fd))
 
-	l := unsafe.Sizeof(C.shared_mem_t{})
-
-	if err = unix.Ftruncate(int(fd), int64(l)); err != nil {
+	if err = unix.Ftruncate(int(fd), int64(size)); err != nil {
 		return nil, err
 	}
 
-	addr, err := C.mmap(nil, C.size_t(l), C.PROT_READ|C.PROT_WRITE, C.MAP_SHARED, fd, 0)
+	addr, err := C.mmap(nil, C.size_t(size), C.PROT_READ|C.PROT_WRITE, C.MAP_SHARED, fd, 0)
 
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Fprintf(os.Stderr, "mmap allocated %d bytes at %p\n", l, addr)
+	fmt.Fprintf(os.Stderr, "mmap allocated %d bytes at %p\n", size, addr)
 
 	shared := (*C.shared_mem_t)(unsafe.Pointer(addr))
 
-	if _, err = C.memset(addr, 0, C.size_t(l)); err != nil {
+	if _, err = C.memset(addr, 0, C.size_t(size)); err != nil {
 		return nil, err
 	}
 
@@ -56,6 +69,8 @@ func Create(name string) (*ReadWriter, error) {
 	 *	block[i].size = 0
 	 *	block[i].done_read, block[i].done_write = 0, 0
 	 */
+	shared.block_count, shared.block_size = C.longlong(blockCount), C.longlong(blockSize)
+
 	shared.write_start, shared.write_end = 1, 1
 
 	if err = sem_init(&shared.sem_signal, true, 0); err != nil {
@@ -66,20 +81,22 @@ func Create(name string) (*ReadWriter, error) {
 		return nil, err
 	}
 
-	for i := 0; i < len(shared.blocks); i++ {
+	for i := int64(0); i < blockCount; i++ {
+		block := (*C.shared_block_t)(unsafe.Pointer(uintptr(addr) + sharedHeaderSize + uintptr(i)*fullBlockSize))
+
 		switch i {
 		case 0:
-			shared.blocks[i].next, shared.blocks[i].prev = 1, C.longlong(len(shared.blocks)-1)
-		case len(shared.blocks) - 1:
-			shared.blocks[i].next, shared.blocks[i].prev = 0, C.longlong(len(shared.blocks)-2)
+			block.next, block.prev = 1, C.longlong(blockCount-1)
+		case blockCount - 1:
+			block.next, block.prev = 0, C.longlong(blockCount-2)
 		default:
-			shared.blocks[i].next, shared.blocks[i].prev = C.longlong(i+1), C.longlong(i-1)
+			block.next, block.prev = C.longlong(i+1), C.longlong(i-1)
 		}
 	}
 
 	return &ReadWriter{
 		shared: shared,
-		len:    l,
+		len:    size,
 		name:   name,
 	}, nil
 }

@@ -139,9 +139,12 @@ func (rw *ReadWriter) GetReadBuffer() (*Buffer, error) {
 
 	var block *C.shared_block_t
 
+	blocks := uintptr(unsafe.Pointer(rw.shared)) + sharedHeaderSize
+	fullBlockSize := blockHeaderSize + uintptr(rw.shared.block_size)
+
 	for {
 		blockIndex := atomic.LoadInt64((*int64)(&rw.shared.read_start))
-		block = &rw.shared.blocks[blockIndex]
+		block = (*C.shared_block_t)(unsafe.Pointer(blocks + uintptr(blockIndex)*fullBlockSize))
 
 		if int64(block.next) == atomic.LoadInt64((*int64)(&rw.shared.write_end)) {
 			if err := sem_wait(&rw.shared.sem_signal); err != nil {
@@ -156,11 +159,17 @@ func (rw *ReadWriter) GetReadBuffer() (*Buffer, error) {
 		}
 	}
 
-	data := (*[len(block.data)]byte)(unsafe.Pointer(&block.data[0]))
+	size := block.size
+
+	if size > rw.shared.block_size {
+		size = rw.shared.block_size
+	}
+
+	data := (*[1 << 30]byte)(unsafe.Pointer(uintptr(unsafe.Pointer(block)) + blockHeaderSize))
 	flags := (*[len(block.flags)]byte)(unsafe.Pointer(&block.flags[0]))
 	return &Buffer{
 		block,
-		data[:block.size:block.size],
+		data[:size:size],
 		flags[:],
 	}, nil
 }
@@ -170,9 +179,12 @@ func (rw *ReadWriter) SendReadBuffer(buf *Buffer) error {
 
 	atomic.StoreInt64((*int64)(&block.done_read), 1)
 
+	blocks := uintptr(unsafe.Pointer(rw.shared)) + sharedHeaderSize
+	fullBlockSize := blockHeaderSize + uintptr(rw.shared.block_size)
+
 	for {
 		blockIndex := atomic.LoadInt64((*int64)(&rw.shared.read_end))
-		block = &rw.shared.blocks[blockIndex]
+		block = (*C.shared_block_t)(unsafe.Pointer(blocks + uintptr(blockIndex)*fullBlockSize))
 
 		if !atomic.CompareAndSwapInt64((*int64)(&block.done_read), 1, 0) {
 			return nil
@@ -247,9 +259,12 @@ func (rw *ReadWriter) GetWriteBuffer() (*Buffer, error) {
 
 	var block *C.shared_block_t
 
+	blocks := uintptr(unsafe.Pointer(rw.shared)) + sharedHeaderSize
+	fullBlockSize := blockHeaderSize + uintptr(rw.shared.block_size)
+
 	for {
 		blockIndex := atomic.LoadInt64((*int64)(&rw.shared.write_start))
-		block = &rw.shared.blocks[blockIndex]
+		block = (*C.shared_block_t)(unsafe.Pointer(blocks + uintptr(blockIndex)*fullBlockSize))
 
 		if int64(block.next) == atomic.LoadInt64((*int64)(&rw.shared.read_end)) {
 			if err := sem_wait(&rw.shared.sem_avail); err != nil {
@@ -264,11 +279,11 @@ func (rw *ReadWriter) GetWriteBuffer() (*Buffer, error) {
 		}
 	}
 
-	data := (*[len(block.data)]byte)(unsafe.Pointer(&block.data[0]))
+	data := (*[1 << 30]byte)(unsafe.Pointer(uintptr(unsafe.Pointer(block)) + blockHeaderSize))
 	flags := (*[len(block.flags)]byte)(unsafe.Pointer(&block.flags[0]))
 	return &Buffer{
 		block,
-		data[:0],
+		data[:0:rw.shared.block_size],
 		flags[:],
 	}, nil
 }
@@ -280,9 +295,12 @@ func (rw *ReadWriter) SendWriteBuffer(buf *Buffer) (n int, err error) {
 
 	atomic.StoreInt64((*int64)(&block.done_write), 1)
 
+	blocks := uintptr(unsafe.Pointer(rw.shared)) + sharedHeaderSize
+	fullBlockSize := blockHeaderSize + uintptr(rw.shared.block_size)
+
 	for {
 		blockIndex := atomic.LoadInt64((*int64)(&rw.shared.write_end))
-		block = &rw.shared.blocks[blockIndex]
+		block = (*C.shared_block_t)(unsafe.Pointer(blocks + uintptr(blockIndex)*fullBlockSize))
 
 		if !atomic.CompareAndSwapInt64((*int64)(&block.done_write), 1, 0) {
 			return len(buf.Data), nil

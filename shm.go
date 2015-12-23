@@ -1,6 +1,10 @@
 package main
 
-// #cgo LDFLAGS: -lrt
+/*
+#cgo LDFLAGS: -lrt
+
+#include "structs.h"
+*/
 import "C"
 
 import (
@@ -12,6 +16,12 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"unsafe"
+)
+
+const (
+	sharedHeaderSize = unsafe.Sizeof(C.shared_mem_t{})
+	blockHeaderSize  = unsafe.Sizeof(C.shared_block_t{})
 )
 
 var ErrNotOwner = errors.New("not owner of shared memory")
@@ -49,7 +59,7 @@ func main() {
 	}
 
 	if isServer {
-		reader, err := Create("/shm-go")
+		reader, err := Create("/shm-go", 1024, 8192)
 		must("Create", err)
 		defer func() {
 			must("reader.Close", reader.Close())

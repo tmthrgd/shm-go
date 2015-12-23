@@ -1,15 +1,6 @@
 #include <semaphore.h> // For sem_*
 
-#define IPC_BLOCK_COUNT 1024
-#define IPC_BLOCK_SIZE  8192
-
-#if (IPC_BLOCK_SIZE&0x3f) != 0
-#	error "IPC_BLOCK_SIZE is not a multiple of 64-bytes"
-#endif
-
 typedef struct {
-	char data[IPC_BLOCK_SIZE];
-
 	long long next;
 	long long prev;
 
@@ -19,10 +10,13 @@ typedef struct {
 	volatile long long size;
 
 	volatile char flags[(0x40-((2*2+1)*sizeof(long long))&0x3f)&0x3f];
+
+	char data[0];
 } shared_block_t;
 
 typedef struct {
-	shared_block_t blocks[IPC_BLOCK_COUNT];
+	long long block_count;
+	long long block_size;
 
 	volatile long long read_start;
 	volatile long long read_end;
@@ -33,5 +27,7 @@ typedef struct {
 	sem_t sem_signal; char __padding0[(0x8-sizeof(sem_t)&0x7)&0x7];
 	sem_t sem_avail;  char __padding1[(0x8-sizeof(sem_t)&0x7)&0x7];
 
-	char __padding2[(0x40-(2*2*sizeof(long long)+2*sizeof(sem_t)+2*((0x8-sizeof(sem_t)&0x7)&0x7))&0x3f)&0x3f];
+	char __padding2[(0x40-(3*2*sizeof(long long)+2*sizeof(sem_t)+2*((0x8-sizeof(sem_t)&0x7)&0x7))&0x3f)&0x3f];
+
+	shared_block_t blocks[0];
 } shared_mem_t;
