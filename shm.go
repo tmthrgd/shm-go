@@ -9,6 +9,7 @@ import "C"
 
 import (
 	"crypto/aes"
+	"encoding/binary"
 	"errors"
 	"flag"
 	"fmt"
@@ -69,14 +70,11 @@ func main() {
 	var noop bool
 	flag.BoolVar(&noop, "noop", false, "send blocks without writing to them")
 
-	var counter bool
-	flag.BoolVar(&counter, "ctr", false, "send a counter")
-
 	var enc bool
 	flag.BoolVar(&enc, "enc", false, "stream ctr encrypted zeros through the connection")
 
 	var num int
-	flag.IntVar(&num, "c", 1<<35, "num of bytes (for -noop, -ctr and -enc)")
+	flag.IntVar(&num, "c", 1<<35, "num of bytes (for -noop and -enc)")
 
 	var unlink bool
 	flag.BoolVar(&unlink, "unlink", false, "unlink shared memory")
@@ -179,7 +177,7 @@ func main() {
 			closer = rw
 
 			http.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
-				fmt.Fprintln(w, "hello from go land\n")
+				fmt.Fprintln(w, "hello from go land")
 			})
 
 			http.HandleFunc("/bar", func(w http.ResponseWriter, r *http.Request) {
@@ -300,55 +298,6 @@ func main() {
 
 			must("writer.Close", writer.Close())
 		}
-	case counter:
-		if isServer {
-			reader, err := CreateSimplex(shmName, 1024, 8192)
-			must("Create", err)
-
-			go func() {
-				for {
-					buf, err := reader.GetReadBuffer()
-					must("reader.GetReadBuffer", err)
-
-					must("reader.SendReadBuffer", reader.SendReadBuffer(buf))
-				}
-			}()
-
-			// Termination
-			// http://stackoverflow.com/a/18158859
-			c := make(chan os.Signal, 1)
-			signal.Notify(c, os.Interrupt, os.Kill, unix.SIGTERM)
-			<-c
-
-			must("reader.Close", reader.Close())
-			must("Unlink", Unlink(shmName))
-		} else {
-			writer, err := OpenSimplex(shmName)
-			must("Open", err)
-
-			var ctr [8192]byte
-
-			for j := 0; j < num; {
-				buf, err := writer.GetWriteBuffer()
-				must("writer.GetWriteBuffer", err)
-
-				for i := 0; i < len(ctr); i++ {
-					if ctr[i]++; ctr[i] != 0 {
-						break
-					}
-				}
-
-				buf.Data = buf.Data[:cap(buf.Data)]
-				copy(buf.Data, ctr[:])
-
-				n, err := writer.SendWriteBuffer(buf)
-				must("writer.SendWriteBuffer", err)
-
-				j += n
-			}
-
-			must("writer.Close", writer.Close())
-		}
 	case enc:
 		var key [16]byte
 		c, err := aes.NewCipher(key[:])
@@ -372,15 +321,17 @@ func main() {
 
 					crc = crc32.Update(crc, castagnoli, buf.Data[:8])
 
-					isEOF := (buf.Flags[0] & 0x01) != 0
-
-					must("reader.SendReadBuffer", reader.SendReadBuffer(buf))
-
-					if isEOF {
-						fmt.Fprintf(os.Stderr, "final crc: %d\n", crc)
+					if (buf.Flags[0] & 0x01) != 0 {
+						if expect := binary.LittleEndian.Uint32(buf.Flags[1:]); crc == expect {
+							fmt.Fprintf(os.Stderr, "valid final crc of: %d\n", crc)
+						} else {
+							fmt.Fprintf(os.Stderr, "invalid final crc of: %d, expected: %d\n", crc, expect)
+						}
 
 						crc = 0
 					}
+
+					must("reader.SendReadBuffer", reader.SendReadBuffer(buf))
 				}
 			}()
 
@@ -396,7 +347,11 @@ func main() {
 			writer, err := OpenSimplex(shmName)
 			must("Open", err)
 
-			for j := 0; j < num; {
+			for i := 0; i < len(block); i += 4 {
+				binary.LittleEndian.PutUint32(block[i:], uint32(num))
+			}
+
+			for i := 0; i < num; {
 				buf, err := writer.GetWriteBuffer()
 				must("writer.GetWriteBuffer", err)
 
@@ -405,16 +360,19 @@ func main() {
 
 				crc = crc32.Update(crc, castagnoli, buf.Data[:8])
 
-				if j+len(buf.Data) < num {
+				if i+len(buf.Data) < num {
 					buf.Flags[0] &^= 0x1
 				} else {
+					// EOF
 					buf.Flags[0] |= 0x1
+
+					binary.LittleEndian.PutUint32(buf.Flags[1:], crc)
 				}
 
 				n, err := writer.SendWriteBuffer(buf)
 				must("writer.SendWriteBuffer", err)
 
-				j += n
+				i += n
 			}
 
 			must("writer.Close", writer.Close())

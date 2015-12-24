@@ -23,13 +23,6 @@ func CreateSimplex(name string, blockCount, blockSize int64) (*ReadWriteCloser, 
 		return nil, errNotMultipleOf64
 	}
 
-	fullBlockSize := blockHeaderSize + uintptr(blockSize)
-	size := sharedHeaderSize + fullBlockSize*uintptr(blockCount)
-
-	if size > 1<<30 {
-		return nil, fmt.Errorf("invalid total memory size of %d, maximum allowed is %d", size, 1<<30)
-	}
-
 	nameC := C.CString(name)
 	defer C.free(unsafe.Pointer(nameC))
 
@@ -40,6 +33,9 @@ func CreateSimplex(name string, blockCount, blockSize int64) (*ReadWriteCloser, 
 	}
 
 	defer unix.Close(int(fd))
+
+	fullBlockSize := blockHeaderSize + uintptr(blockSize)
+	size := sharedHeaderSize + fullBlockSize*uintptr(blockCount)
 
 	if err = unix.Ftruncate(int(fd), int64(size)); err != nil {
 		return nil, err
@@ -101,14 +97,6 @@ func CreateDuplex(name string, blockCount, blockSize int64) (*ReadWriteCloser, e
 		return nil, errNotMultipleOf64
 	}
 
-	fullBlockSize := blockHeaderSize + uintptr(blockSize)
-	sharedSize := sharedHeaderSize + fullBlockSize*uintptr(blockCount)
-	size := 2 * sharedSize
-
-	if size > 1<<30 {
-		return nil, fmt.Errorf("invalid total memory size of %d, maximum allowed is %d", size, 1<<30)
-	}
-
 	nameC := C.CString(name)
 	defer C.free(unsafe.Pointer(nameC))
 
@@ -119,6 +107,10 @@ func CreateDuplex(name string, blockCount, blockSize int64) (*ReadWriteCloser, e
 	}
 
 	defer unix.Close(int(fd))
+
+	fullBlockSize := blockHeaderSize + uintptr(blockSize)
+	sharedSize := sharedHeaderSize + fullBlockSize*uintptr(blockCount)
+	size := 2 * sharedSize
 
 	if err = unix.Ftruncate(int(fd), int64(size)); err != nil {
 		return nil, err
