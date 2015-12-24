@@ -89,9 +89,9 @@ func sem_post(sem *C.sem_t) error {
 
 	if _, _, err := unix.Syscall6(unix.SYS_FUTEX, uintptr(unsafe.Pointer(&isem.value)), uintptr(C.FUTEX_WAKE), 1, 0, 0, 0); err != 0 {
 		return err
-	} else {
-		return nil
 	}
+
+	return nil
 }
 
 // This mirrors __new_sem_init from glibc-2.17/nptl/sem_init.c

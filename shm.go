@@ -20,6 +20,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"runtime/pprof"
 	"syscall"
 	"unsafe"
 )
@@ -80,6 +81,10 @@ func main() {
 		must("Unlink", Unlink(shmName))
 		return
 	}
+
+	f, err := os.Create("cpu-" + role + ".prof")
+	must("os.Create", err)
+	must("pprof.StartCPUProfile", pprof.StartCPUProfile(f))
 
 	switch {
 	case interactive:
@@ -241,7 +246,6 @@ func main() {
 			must("Unlink", Unlink(shmName))
 		}
 	default:
-
 		if isServer {
 			reader, err := CreateSimplex(shmName, 1024, 8192)
 			must("Create", err)
@@ -270,7 +274,7 @@ func main() {
 
 			must("writer.Close", writer.Close())
 		}
-
-		return
 	}
+
+	pprof.StopCPUProfile()
 }
