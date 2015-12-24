@@ -38,13 +38,13 @@ func OpenSimplex(name string) (*ReadWriteCloser, error) {
 	}
 
 	shared := (*C.shared_mem_t)(addr)
-	blockCount, blockSize := shared.block_count, shared.block_size
+	blockCount, blockSize := uintptr(shared.block_count), uintptr(shared.block_size)
 
 	if _, err = C.munmap(addr, C.size_t(sharedHeaderSize)); err != nil {
 		return nil, err
 	}
 
-	size := sharedHeaderSize + (blockHeaderSize+uintptr(blockSize))*uintptr(blockCount)
+	size := sharedHeaderSize + (blockHeaderSize+blockSize)*blockCount
 	addr, err = C.mmap(nil, C.size_t(size), C.PROT_READ|C.PROT_WRITE, C.MAP_SHARED, fd, 0)
 
 	if err != nil {
@@ -80,13 +80,13 @@ func OpenDuplex(name string) (*ReadWriteCloser, error) {
 	}
 
 	shared := (*C.shared_mem_t)(unsafe.Pointer(addr))
-	blockCount, blockSize := shared.block_count, shared.block_size
+	blockCount, blockSize := uintptr(shared.block_count), uintptr(shared.block_size)
 
 	if _, err = C.munmap(addr, C.size_t(sharedHeaderSize)); err != nil {
 		return nil, err
 	}
 
-	sharedSize := sharedHeaderSize + (blockHeaderSize+uintptr(blockSize))*uintptr(blockCount)
+	sharedSize := sharedHeaderSize + (blockHeaderSize+blockSize)*blockCount
 	size := 2 * sharedSize
 
 	addr, err = C.mmap(nil, C.size_t(size), C.PROT_READ|C.PROT_WRITE, C.MAP_SHARED, fd, 0)

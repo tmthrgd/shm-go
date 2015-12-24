@@ -62,12 +62,11 @@ func CreateSimplex(name string, blockCount, blockSize int64) (*ReadWriteCloser, 
 	/*
 	 * memset already set:
 	 *	shared.read_start, shared.read_end = 0, 0
+	 *	shared.write_start, shared.write_end = 1, 1
 	 *	block[i].size = 0
 	 *	block[i].done_read, block[i].done_write = 0, 0
 	 */
-	shared.block_count, shared.block_size = C.longlong(blockCount), C.longlong(blockSize)
-
-	shared.write_start, shared.write_end = 1, 1
+	shared.block_count, shared.block_size = C.ulonglong(blockCount), C.ulonglong(blockSize)
 
 	if err = sem_init(&shared.sem_signal, true, 0); err != nil {
 		return nil, err
@@ -82,11 +81,11 @@ func CreateSimplex(name string, blockCount, blockSize int64) (*ReadWriteCloser, 
 
 		switch i {
 		case 0:
-			block.next, block.prev = 1, C.longlong(blockCount-1)
+			block.next, block.prev = 1, C.ulonglong(blockCount-1)
 		case blockCount - 1:
-			block.next, block.prev = 0, C.longlong(blockCount-2)
+			block.next, block.prev = 0, C.ulonglong(blockCount-2)
 		default:
-			block.next, block.prev = C.longlong(i+1), C.longlong(i-1)
+			block.next, block.prev = C.ulonglong(i+1), C.ulonglong(i-1)
 		}
 	}
 
@@ -143,12 +142,11 @@ func CreateDuplex(name string, blockCount, blockSize int64) (*ReadWriteCloser, e
 		/*
 		 * memset already set:
 		 *	shared.read_start, shared.read_end = 0, 0
+		 *	shared.write_start, shared.write_end = 1, 1
 		 *	shared.blocks[i].size = 0
 		 *	shared.blocks[i].done_read, shared.blocks[i].done_write = 0, 0
 		 */
-		shared.block_count, shared.block_size = C.longlong(blockCount), C.longlong(blockSize)
-
-		shared.write_start, shared.write_end = 1, 1
+		shared.block_count, shared.block_size = C.ulonglong(blockCount), C.ulonglong(blockSize)
 
 		if err = sem_init(&shared.sem_signal, true, 0); err != nil {
 			return nil, err
@@ -163,11 +161,11 @@ func CreateDuplex(name string, blockCount, blockSize int64) (*ReadWriteCloser, e
 
 			switch j {
 			case 0:
-				block.next, block.prev = 1, C.longlong(blockCount-1)
+				block.next, block.prev = 1, C.ulonglong(blockCount-1)
 			case blockCount - 1:
-				block.next, block.prev = 0, C.longlong(blockCount-2)
+				block.next, block.prev = 0, C.ulonglong(blockCount-2)
 			default:
-				block.next, block.prev = C.longlong(j+1), C.longlong(j-1)
+				block.next, block.prev = C.ulonglong(j+1), C.ulonglong(j-1)
 			}
 		}
 	}
