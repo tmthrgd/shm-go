@@ -43,5 +43,5 @@ func (l *Listener) Close() error {
 }
 
 func (l *Listener) Addr() net.Addr {
-	return &Addr{l.name}
+	return Addr(l.name)
 }

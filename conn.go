@@ -19,11 +19,11 @@ func (c *Conn) Close() error {
 }
 
 func (c *Conn) LocalAddr() net.Addr {
-	return &Addr{c.name}
+	return Addr(c.name)
 }
 
 func (c *Conn) RemoteAddr() net.Addr {
-	return &Addr{c.name}
+	return Addr(c.name)
 }
 
 func (c *Conn) SetDeadline(t time.Time) error {

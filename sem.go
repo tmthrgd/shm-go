@@ -25,7 +25,7 @@ import (
 // This mirrors atomic_decrement_if_positive from glibc-2.17/include/atomic.h
 func atomicDecrementIfPositive(mem *uint32) uint32 {
 	for {
-		if old := atomic.LoadUint32(mem); old <= 0 || atomic.CompareAndSwapUint32(mem, old, old-1) {
+		if old := atomic.LoadUint32(mem); old == 0 || atomic.CompareAndSwapUint32(mem, old, old-1) {
 			return old
 		}
 	}
@@ -40,15 +40,16 @@ func sem_wait(sem *C.sem_t) error {
 	}
 
 	atomic.AddUint64((*uint64)(&isem.nwaiters), 1)
-	defer atomic.AddUint64((*uint64)(&isem.nwaiters), ^uint64(0))
 
 	for {
 		//err = do_futex_wait(isem);
 		if _, _, err := unix.Syscall6(unix.SYS_FUTEX, uintptr(unsafe.Pointer(&isem.value)), uintptr(C.FUTEX_WAIT), 0, 0, 0, 0); err != 0 && err != syscall.EWOULDBLOCK {
+			atomic.AddUint64((*uint64)(&isem.nwaiters), ^uint64(0))
 			return err
 		}
 
 		if atomicDecrementIfPositive((*uint32)(&isem.value)) > 0 {
+			atomic.AddUint64((*uint64)(&isem.nwaiters), ^uint64(0))
 			return nil
 		}
 	}

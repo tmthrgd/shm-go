@@ -1,13 +1,11 @@
 package main
 
-type Addr struct {
-	name string
-}
+type Addr string
 
-func (*Addr) Network() string {
+func (Addr) Network() string {
 	return "shm"
 }
 
-func (a *Addr) String() string {
-	return a.name
+func (a Addr) String() string {
+	return string(a)
 }
