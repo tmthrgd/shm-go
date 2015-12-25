@@ -43,10 +43,6 @@ const shmName = "/shm-go"
 
 func must(name string, err error) {
 	if err != nil {
-		if err, ok := err.(syscall.Errno); ok && err == 0 {
-			return
-		}
-
 		panic(fmt.Sprintf("%s failed with err: %v\n", name, err))
 	}
 }
@@ -98,6 +94,7 @@ func main() {
 	f, err := os.Create("cpu-" + role + ".prof")
 	must("os.Create", err)
 	must("pprof.StartCPUProfile", pprof.StartCPUProfile(f))
+	defer pprof.StopCPUProfile()
 
 	switch {
 	case interactive:
@@ -409,6 +406,4 @@ func main() {
 			must("writer.Close", writer.Close())
 		}
 	}
-
-	pprof.StopCPUProfile()
 }
