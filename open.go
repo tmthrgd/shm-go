@@ -55,9 +55,10 @@ func OpenSimplex(name string) (*ReadWriteCloser, error) {
 
 	shared = (*C.shared_mem_t)(addr)
 	return &ReadWriteCloser{
-		readShared:  shared,
-		writeShared: shared,
-		size:        size,
+		readShared:    shared,
+		writeShared:   shared,
+		size:          size,
+		fullBlockSize: blockHeaderSize + blockSize,
 	}, nil
 }
 
@@ -98,8 +99,9 @@ func OpenDuplex(name string) (*ReadWriteCloser, error) {
 	fmt.Fprintf(os.Stderr, "mmap mapped %d bytes to %p\n", size, addr)
 
 	return &ReadWriteCloser{
-		readShared:  (*C.shared_mem_t)(unsafe.Pointer(uintptr(addr) + sharedSize)),
-		writeShared: (*C.shared_mem_t)(addr),
-		size:        size,
+		readShared:    (*C.shared_mem_t)(unsafe.Pointer(uintptr(addr) + sharedSize)),
+		writeShared:   (*C.shared_mem_t)(addr),
+		size:          size,
+		fullBlockSize: blockHeaderSize + blockSize,
 	}, nil
 }
