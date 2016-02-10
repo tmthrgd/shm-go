@@ -79,7 +79,7 @@ func (rw *ReadWriteCloser) WriteTo(w io.Writer) (n int64, err error) {
 		buf, err := rw.GetReadBuffer()
 
 		if err != nil {
-			return 0, err
+			return n, err
 		}
 
 		nn, err := w.Write(buf.Data)
@@ -195,7 +195,7 @@ func (rw *ReadWriteCloser) ReadFrom(r io.Reader) (n int64, err error) {
 		buf, err := rw.GetWriteBuffer()
 
 		if err != nil {
-			return 0, err
+			return n, err
 		}
 
 		nn, err := r.Read(buf.Data[:cap(buf.Data)])

@@ -58,7 +58,7 @@ func CreateSimplex(name string, blockCount, blockSize int64) (*ReadWriteCloser, 
 	/*
 	 * memset already set:
 	 *	shared.read_start, shared.read_end = 0, 0
-	 *	shared.write_start, shared.write_end = 1, 1
+	 *	shared.write_start, shared.write_end = 0, 0
 	 *	block[i].size = 0
 	 *	block[i].done_read, block[i].done_write = 0, 0
 	 */
@@ -135,7 +135,7 @@ func CreateDuplex(name string, blockCount, blockSize int64) (*ReadWriteCloser, e
 		/*
 		 * memset already set:
 		 *	shared.read_start, shared.read_end = 0, 0
-		 *	shared.write_start, shared.write_end = 1, 1
+		 *	shared.write_start, shared.write_end = 0, 0
 		 *	shared.blocks[i].size = 0
 		 *	shared.blocks[i].done_read, shared.blocks[i].done_write = 0, 0
 		 */

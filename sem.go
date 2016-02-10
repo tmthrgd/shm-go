@@ -1,7 +1,7 @@
 package main
 
 /*
-#include <semaphore.h>       // For sem_*
+#include <semaphore.h>      // For sem_*
 #include <linux/futex.h>    // For FUTEX_*
 #include <bits/local_lim.h> // For SEM_VALUE_MAX
 

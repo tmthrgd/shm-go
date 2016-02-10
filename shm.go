@@ -77,7 +77,7 @@ func main() {
 
 	flag.Parse()
 
-	var isServer = role == "server"
+	isServer := role == "server"
 
 	switch role {
 	case "server", "client":
