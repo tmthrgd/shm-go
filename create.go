@@ -70,7 +70,7 @@ func CreateSimplex(name string, perm os.FileMode, blockCount, blockSize int) (*R
 		}
 	}
 
-	atomic.StoreUint64((*uint64)(&shared.Version), version)
+	atomic.StoreUint32((*uint32)(&shared.Version), version)
 
 	return &ReadWriteCloser{
 		data:          data,
@@ -139,7 +139,7 @@ func CreateDuplex(name string, perm os.FileMode, blockCount, blockSize int) (*Re
 			}
 		}
 
-		atomic.StoreUint64((*uint64)(&shared.Version), version)
+		atomic.StoreUint32((*uint32)(&shared.Version), version)
 	}
 
 	return &ReadWriteCloser{

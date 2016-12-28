@@ -26,7 +26,8 @@ typedef struct {
 } shared_block_t;
 
 typedef struct {
-	uint64_t Version;
+	uint32_t Version;
+	uint32_t __padding0;
 
 	uint64_t BlockCount;
 	uint64_t BlockSize;
@@ -40,7 +41,7 @@ typedef struct {
 	sem_t SemSignal;
 	sem_t SemAvail;
 
-	uint8_t __padding[(0x40-((1+3*2)*sizeof(uint64_t)+2*sizeof(sem_t))&0x3f)&0x3f];
+	uint8_t __padding1[(0x40-(2*sizeof(uint32_t)+3*2*sizeof(uint64_t)+2*sizeof(sem_t))&0x3f)&0x3f];
 
 	shared_block_t Blocks[];
 } shared_mem_t;
@@ -56,5 +57,5 @@ const (
 	blockHeaderSize  = C.sizeof_shared_block_t
 	blockFlagsSize   = len(sharedBlock{}.Flags)
 
-	version = uint64((^uint(0)>>32)&0x80000000)<<32 | 0x0000000000000001
+	version = uint32((^uint(0)>>32)&0x80000000) | 0x00000001
 )

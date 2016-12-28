@@ -13,16 +13,17 @@ type sharedBlock struct {
 }
 
 type sharedMem struct {
-	Version    uint64
-	BlockCount uint64
-	BlockSize  uint64
-	ReadStart  uint64
-	ReadEnd    uint64
-	WriteStart uint64
-	WriteEnd   uint64
-	SemSignal  [16]byte
-	SemAvail   [16]byte
-	X__padding [40]uint8
+	Version     uint32
+	X__padding0 uint32
+	BlockCount  uint64
+	BlockSize   uint64
+	ReadStart   uint64
+	ReadEnd     uint64
+	WriteStart  uint64
+	WriteEnd    uint64
+	SemSignal   [16]byte
+	SemAvail    [16]byte
+	X__padding1 [40]uint8
 }
 
 const (
@@ -30,5 +31,5 @@ const (
 	blockHeaderSize  = 0x40
 	blockFlagsSize   = len(sharedBlock{}.Flags)
 
-	version = uint64((^uint(0)>>32)&0x80000000)<<32 | 0x0000000000000001
+	version = uint32((^uint(0)>>32)&0x80000000) | 0x00000001
 )

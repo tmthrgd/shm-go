@@ -26,7 +26,7 @@ func OpenSimplex(name string) (*ReadWriteCloser, error) {
 
 	shared := (*sharedMem)(unsafe.Pointer(&data[0]))
 
-	if atomic.LoadUint64((*uint64)(&shared.Version)) != version {
+	if atomic.LoadUint32((*uint32)(&shared.Version)) != version {
 		return nil, ErrInvalidSharedMemory
 	}
 
@@ -68,7 +68,7 @@ func OpenDuplex(name string) (*ReadWriteCloser, error) {
 
 	shared := (*sharedMem)(unsafe.Pointer(&data[0]))
 
-	if atomic.LoadUint64((*uint64)(&shared.Version)) != version {
+	if atomic.LoadUint32((*uint32)(&shared.Version)) != version {
 		return nil, ErrInvalidSharedMemory
 	}
 
