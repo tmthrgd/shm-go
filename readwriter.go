@@ -21,6 +21,7 @@ const (
 
 type Buffer struct {
 	block *sharedBlock
+	write bool
 
 	Data  []byte
 	Flags *[blockFlagsSize]byte
@@ -126,16 +127,20 @@ func (rw *ReadWriteCloser) GetReadBuffer() (Buffer, error) {
 	data := (*[1 << 30]byte)(unsafe.Pointer(uintptr(unsafe.Pointer(block)) + blockHeaderSize))
 	flags := (*[len(block.Flags)]byte)(unsafe.Pointer(&block.Flags[0]))
 	return Buffer{
-		block,
+		block: block,
 
-		data[:block.Size:rw.readShared.BlockSize],
-		flags,
+		Data:  data[:block.Size:rw.readShared.BlockSize],
+		Flags: flags,
 	}, nil
 }
 
 func (rw *ReadWriteCloser) SendReadBuffer(buf Buffer) error {
 	if atomic.LoadUint64(&rw.closed) != 0 {
 		return io.ErrClosedPipe
+	}
+
+	if buf.write {
+		return ErrInvalidBuffer
 	}
 
 	var block *sharedBlock = buf.block
@@ -249,16 +254,21 @@ func (rw *ReadWriteCloser) GetWriteBuffer() (Buffer, error) {
 	data := (*[1 << 30]byte)(unsafe.Pointer(uintptr(unsafe.Pointer(block)) + blockHeaderSize))
 	flags := (*[len(block.Flags)]byte)(unsafe.Pointer(&block.Flags[0]))
 	return Buffer{
-		block,
+		block: block,
+		write: true,
 
-		data[:0:rw.writeShared.BlockSize],
-		flags,
+		Data:  data[:0:rw.writeShared.BlockSize],
+		Flags: flags,
 	}, nil
 }
 
 func (rw *ReadWriteCloser) SendWriteBuffer(buf Buffer) (n int, err error) {
 	if atomic.LoadUint64(&rw.closed) != 0 {
 		return 0, io.ErrClosedPipe
+	}
+
+	if !buf.write {
+		return 0, ErrInvalidBuffer
 	}
 
 	var block *sharedBlock = buf.block
