@@ -57,7 +57,7 @@ func CreateSimplex(name string, blockCount, blockSize uint64) (*ReadWriteCloser,
 	}
 
 	for i := uint64(0); i < blockCount; i++ {
-		block := (*sharedBlock)(unsafe.Pointer(uintptr(unsafe.Pointer(&data[0])) + sharedHeaderSize + uintptr(i*fullBlockSize)))
+		block := (*sharedBlock)(unsafe.Pointer(&data[sharedHeaderSize+i*fullBlockSize]))
 
 		switch i {
 		case 0:
@@ -106,7 +106,7 @@ func CreateDuplex(name string, blockCount, blockSize uint64) (*ReadWriteCloser, 
 	}
 
 	for i := uint64(0); i < 2; i++ {
-		shared := (*sharedMem)(unsafe.Pointer(uintptr(unsafe.Pointer(&data[0])) + uintptr(i*sharedSize)))
+		shared := (*sharedMem)(unsafe.Pointer(&data[i*sharedSize]))
 
 		/*
 		 * memset already set:
@@ -126,7 +126,7 @@ func CreateDuplex(name string, blockCount, blockSize uint64) (*ReadWriteCloser, 
 		}
 
 		for j := uint64(0); j < blockCount; j++ {
-			block := (*sharedBlock)(unsafe.Pointer(uintptr(unsafe.Pointer(shared)) + sharedHeaderSize + uintptr(j*fullBlockSize)))
+			block := (*sharedBlock)(unsafe.Pointer(&data[i*sharedSize+sharedHeaderSize+j*fullBlockSize]))
 
 			switch j {
 			case 0:
@@ -144,7 +144,7 @@ func CreateDuplex(name string, blockCount, blockSize uint64) (*ReadWriteCloser, 
 	return &ReadWriteCloser{
 		data:          data,
 		readShared:    (*sharedMem)(unsafe.Pointer(&data[0])),
-		writeShared:   (*sharedMem)(unsafe.Pointer(uintptr(unsafe.Pointer(&data[0])) + uintptr(sharedSize))),
+		writeShared:   (*sharedMem)(unsafe.Pointer(&data[sharedSize])),
 		size:          size,
 		fullBlockSize: fullBlockSize,
 	}, nil

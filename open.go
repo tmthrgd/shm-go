@@ -88,7 +88,7 @@ func OpenDuplex(name string) (*ReadWriteCloser, error) {
 
 	return &ReadWriteCloser{
 		data:          data,
-		readShared:    (*sharedMem)(unsafe.Pointer(uintptr(unsafe.Pointer(&data[0])) + uintptr(sharedSize))),
+		readShared:    (*sharedMem)(unsafe.Pointer(&data[sharedSize])),
 		writeShared:   (*sharedMem)(unsafe.Pointer(&data[0])),
 		size:          size,
 		fullBlockSize: blockHeaderSize + blockSize,
