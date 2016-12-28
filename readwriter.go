@@ -1,9 +1,9 @@
 package shm
 
 import (
+	"golang.org/x/sys/unix"
 	"io"
 	"sync/atomic"
-	"golang.org/x/sys/unix"
 	"unsafe"
 
 	"github.com/tmthrgd/go-sem"
