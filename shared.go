@@ -8,36 +8,37 @@
 package shm
 
 /*
+#include <stdint.h>    // For (u)int*_t
 #include <semaphore.h> // For sem_*
 
 typedef struct {
-	unsigned long long Next;
-	unsigned long long Prev;
+	uint64_t Next;
+	uint64_t Prev;
 
-	unsigned long long DoneRead;
-	unsigned long long DoneWrite;
+	uint64_t DoneRead;
+	uint64_t DoneWrite;
 
-	unsigned long long Size;
+	uint64_t Size;
 
-	unsigned char Flags[(0x40-((2*2+1)*sizeof(long long))&0x3f)&0x3f];
+	uint8_t Flags[(0x40-((2*2+1)*sizeof(uint64_t))&0x3f)&0x3f];
 
-	unsigned char Data[];
+	uint8_t Data[];
 } shared_block_t;
 
 typedef struct {
-	unsigned long long BlockCount;
-	unsigned long long BlockSize;
+	uint64_t BlockCount;
+	uint64_t BlockSize;
 
-	unsigned long long ReadStart;
-	unsigned long long ReadEnd;
+	uint64_t ReadStart;
+	uint64_t ReadEnd;
 
-	unsigned long long WriteStart;
-	unsigned long long WriteEnd;
+	uint64_t WriteStart;
+	uint64_t WriteEnd;
 
 	sem_t SemSignal;
 	sem_t SemAvail;
 
-	unsigned char __padding[(0x40-(3*2*sizeof(long long)+2*sizeof(sem_t))&0x3f)&0x3f];
+	uint8_t __padding[(0x40-(3*2*sizeof(uint64_t)+2*sizeof(sem_t))&0x3f)&0x3f];
 
 	shared_block_t Blocks[];
 } shared_mem_t;
