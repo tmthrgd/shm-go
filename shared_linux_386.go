@@ -30,5 +30,5 @@ const (
 	blockHeaderSize  = 0x40
 	blockFlagsSize   = len(sharedBlock{}.Flags)
 
-	version = uint64((^uint(0)>>32)&0x80000000)<<32 | 0x00000001
+	version = uint64((^uint(0)>>32)&0x80000000)<<32 | 0x0000000000000001
 )
