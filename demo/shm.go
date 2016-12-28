@@ -57,8 +57,8 @@ func main() {
 	var enc bool
 	flag.BoolVar(&enc, "enc", false, "stream ctr encrypted zeros through the connection")
 
-	var num int
-	flag.IntVar(&num, "c", 1<<35, "num of bytes (for -noop and -enc)")
+	var num uint64
+	flag.Uint64Var(&num, "c", 1<<35, "num of bytes (for -noop and -enc)")
 
 	var unlink bool
 	flag.BoolVar(&unlink, "unlink", false, "unlink shared memory")
@@ -269,7 +269,7 @@ func main() {
 			writer, err := shm.OpenSimplex(shmName)
 			must("Open", err)
 
-			for i := 0; i < num; {
+			for i := uint64(0); i < num; {
 				buf, err := writer.GetWriteBuffer()
 				must("writer.GetWriteBuffer", err)
 
@@ -278,7 +278,7 @@ func main() {
 				n, err := writer.SendWriteBuffer(buf)
 				must("writer.SendWriteBuffer", err)
 
-				i += n
+				i += uint64(n)
 			}
 
 			must("writer.Close", writer.Close())
@@ -332,11 +332,11 @@ func main() {
 			writer, err := shm.OpenSimplex(shmName)
 			must("Open", err)
 
-			for i := 0; i < len(block); i += 4 {
-				binary.LittleEndian.PutUint32(block[i:], uint32(num))
+			for i := 0; i < len(block); i += 8 {
+				binary.LittleEndian.PutUint64(block[i:], num)
 			}
 
-			for i := 0; i < num; {
+			for i := uint64(0); i < num; {
 				buf, err := writer.GetWriteBuffer()
 				must("writer.GetWriteBuffer", err)
 
@@ -345,7 +345,7 @@ func main() {
 
 				crc = crc32.Update(crc, castagnoli, buf.Data[:8])
 
-				if i+len(buf.Data) < num {
+				if i+uint64(len(buf.Data)) < num {
 					buf.Flags[0] &^= 0x1
 				} else {
 					// EOF
@@ -357,7 +357,7 @@ func main() {
 				n, err := writer.SendWriteBuffer(buf)
 				must("writer.SendWriteBuffer", err)
 
-				i += n
+				i += uint64(n)
 			}
 
 			must("writer.Close", writer.Close())
