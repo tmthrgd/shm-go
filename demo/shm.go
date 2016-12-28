@@ -300,7 +300,7 @@ func main() {
 
 					crc = crc32.Update(crc, castagnoli, buf.Data[:8])
 
-					if buf.Flags[0] & 0x01 != 0 {
+					if buf.Flags[0]&0x01 != 0 {
 						if expect := binary.LittleEndian.Uint32(buf.Flags[1:]); crc == expect {
 							fmt.Fprintf(os.Stderr, "valid final crc of: %d\n", crc)
 						} else {
