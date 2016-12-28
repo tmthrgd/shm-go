@@ -21,7 +21,7 @@ func CreateSimplex(name string, perm os.FileMode, blockCount, blockSize uint64) 
 
 	file, err := shmOpen(name, unix.O_CREAT|unix.O_EXCL|unix.O_TRUNC|unix.O_RDWR, perm)
 	if err != nil {
-		return nil, err
+		return nil, &os.PathError{Op: "open", Path: name, Err: err}
 	}
 
 	defer file.Close()
@@ -88,7 +88,7 @@ func CreateDuplex(name string, perm os.FileMode, blockCount, blockSize uint64) (
 
 	file, err := shmOpen(name, unix.O_CREAT|unix.O_EXCL|unix.O_TRUNC|unix.O_RDWR, perm)
 	if err != nil {
-		return nil, err
+		return nil, &os.PathError{Op: "open", Path: name, Err: err}
 	}
 
 	defer file.Close()
