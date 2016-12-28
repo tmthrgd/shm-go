@@ -7,6 +7,7 @@ package net
 
 import (
 	"net"
+	"os"
 	"sync"
 
 	"github.com/tmthrgd/shm-go"
@@ -19,8 +20,8 @@ type Listener struct {
 	mut sync.Mutex
 }
 
-func Listen(name string, blockCount, blockSize uint64) (*Listener, error) {
-	rw, err := shm.CreateDuplex(name, blockCount, blockSize)
+func Listen(name string, perm os.FileMode, blockCount, blockSize uint64) (*Listener, error) {
+	rw, err := shm.CreateDuplex(name, perm, blockCount, blockSize)
 	if err != nil {
 		return nil, err
 	}

@@ -85,7 +85,7 @@ func main() {
 		done := make(chan struct{})
 
 		if isServer {
-			rw, err := shm.CreateDuplex(shmName, 1024, 8192)
+			rw, err := shm.CreateDuplex(shmName, 0644, 1024, 8192)
 			must("Create", err)
 			closer = rw
 
@@ -151,7 +151,7 @@ func main() {
 		done := make(chan struct{})
 
 		if isServer {
-			rw, err := shm.CreateDuplex(shmName, 1024, 8192)
+			rw, err := shm.CreateDuplex(shmName, 0644, 1024, 8192)
 			must("Create", err)
 			closer = rw
 
@@ -239,7 +239,7 @@ func main() {
 		}
 	case noop:
 		if isServer {
-			reader, err := shm.CreateSimplex(shmName, 1024, 8192)
+			reader, err := shm.CreateSimplex(shmName, 0644, 1024, 8192)
 			must("Create", err)
 
 			go func() {
@@ -288,7 +288,7 @@ func main() {
 		castagnoli := crc32.MakeTable(crc32.Castagnoli)
 
 		if isServer {
-			reader, err := shm.CreateSimplex(shmName, 1024, 8192)
+			reader, err := shm.CreateSimplex(shmName, 0644, 1024, 8192)
 			must("Create", err)
 
 			go func() {
@@ -360,7 +360,7 @@ func main() {
 		}
 	default:
 		if isServer {
-			reader, err := shm.CreateSimplex(shmName, 1024, 8192)
+			reader, err := shm.CreateSimplex(shmName, 0644, 1024, 8192)
 			must("Create", err)
 
 			go func() {

@@ -7,18 +7,19 @@ package shm
 
 import (
 	"golang.org/x/sys/unix"
+	"os"
 	"sync/atomic"
 	"unsafe"
 
 	"github.com/tmthrgd/go-sem"
 )
 
-func CreateSimplex(name string, blockCount, blockSize uint64) (*ReadWriteCloser, error) {
+func CreateSimplex(name string, perm os.FileMode, blockCount, blockSize uint64) (*ReadWriteCloser, error) {
 	if blockSize&0x3f != 0 {
 		return nil, ErrNotMultipleOf64
 	}
 
-	file, err := shmOpen(name, unix.O_CREAT|unix.O_EXCL|unix.O_TRUNC|unix.O_RDWR, 0644)
+	file, err := shmOpen(name, unix.O_CREAT|unix.O_EXCL|unix.O_TRUNC|unix.O_RDWR, perm)
 	if err != nil {
 		return nil, err
 	}
@@ -80,12 +81,12 @@ func CreateSimplex(name string, blockCount, blockSize uint64) (*ReadWriteCloser,
 	}, nil
 }
 
-func CreateDuplex(name string, blockCount, blockSize uint64) (*ReadWriteCloser, error) {
+func CreateDuplex(name string, perm os.FileMode, blockCount, blockSize uint64) (*ReadWriteCloser, error) {
 	if blockSize&0x3f != 0 {
 		return nil, ErrNotMultipleOf64
 	}
 
-	file, err := shmOpen(name, unix.O_CREAT|unix.O_EXCL|unix.O_TRUNC|unix.O_RDWR, 0644)
+	file, err := shmOpen(name, unix.O_CREAT|unix.O_EXCL|unix.O_TRUNC|unix.O_RDWR, perm)
 	if err != nil {
 		return nil, err
 	}
