@@ -7,6 +7,7 @@ package shm
 
 import (
 	"golang.org/x/sys/unix"
+	"sync/atomic"
 	"unsafe"
 )
 
@@ -24,6 +25,11 @@ func OpenSimplex(name string) (*ReadWriteCloser, error) {
 	}
 
 	shared := (*sharedMem)(unsafe.Pointer(&data[0]))
+
+	if atomic.LoadUint64((*uint64)(&shared.Version)) != version {
+		return nil, ErrInvalidSharedMemory
+	}
+
 	blockCount, blockSize := uint64(shared.BlockCount), uint64(shared.BlockSize)
 
 	if err = unix.Munmap(data); err != nil {
@@ -61,6 +67,11 @@ func OpenDuplex(name string) (*ReadWriteCloser, error) {
 	}
 
 	shared := (*sharedMem)(unsafe.Pointer(&data[0]))
+
+	if atomic.LoadUint64((*uint64)(&shared.Version)) != version {
+		return nil, ErrInvalidSharedMemory
+	}
+
 	blockCount, blockSize := uint64(shared.BlockCount), uint64(shared.BlockSize)
 
 	if err = unix.Munmap(data); err != nil {

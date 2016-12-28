@@ -106,7 +106,7 @@ func (rw *ReadWriteCloser) GetReadBuffer() (Buffer, error) {
 		blockIndex := atomic.LoadUint64((*uint64)(&rw.readShared.ReadStart))
 
 		if blockIndex > uint64(rw.readShared.BlockCount) {
-			return Buffer{}, ErrInvalidBlockIndex
+			return Buffer{}, ErrInvalidSharedMemory
 		}
 
 		block = (*sharedBlock)(unsafe.Pointer(blocks + uintptr(blockIndex*rw.fullBlockSize)))
@@ -153,7 +153,7 @@ func (rw *ReadWriteCloser) SendReadBuffer(buf Buffer) error {
 		blockIndex := atomic.LoadUint64((*uint64)(&rw.readShared.ReadEnd))
 
 		if blockIndex > uint64(rw.readShared.BlockCount) {
-			return ErrInvalidBlockIndex
+			return ErrInvalidSharedMemory
 		}
 
 		block = (*sharedBlock)(unsafe.Pointer(blocks + uintptr(blockIndex*rw.fullBlockSize)))
@@ -233,7 +233,7 @@ func (rw *ReadWriteCloser) GetWriteBuffer() (Buffer, error) {
 		blockIndex := atomic.LoadUint64((*uint64)(&rw.writeShared.WriteStart))
 
 		if blockIndex > uint64(rw.writeShared.BlockCount) {
-			return Buffer{}, ErrInvalidBlockIndex
+			return Buffer{}, ErrInvalidSharedMemory
 		}
 
 		block = (*sharedBlock)(unsafe.Pointer(blocks + uintptr(blockIndex*rw.fullBlockSize)))
@@ -283,7 +283,7 @@ func (rw *ReadWriteCloser) SendWriteBuffer(buf Buffer) (n int, err error) {
 		blockIndex := atomic.LoadUint64((*uint64)(&rw.writeShared.WriteEnd))
 
 		if blockIndex > uint64(rw.writeShared.BlockCount) {
-			return len(buf.Data), ErrInvalidBlockIndex
+			return len(buf.Data), ErrInvalidSharedMemory
 		}
 
 		block = (*sharedBlock)(unsafe.Pointer(blocks + uintptr(blockIndex*rw.fullBlockSize)))

@@ -7,6 +7,7 @@ package shm
 
 import (
 	"golang.org/x/sys/unix"
+	"sync/atomic"
 	"unsafe"
 
 	"github.com/tmthrgd/go-sem"
@@ -67,6 +68,8 @@ func CreateSimplex(name string, blockCount, blockSize uint64) (*ReadWriteCloser,
 			*(*uint64)(&block.Next), *(*uint64)(&block.Prev) = i+1, i-1
 		}
 	}
+
+	atomic.StoreUint64((*uint64)(&shared.Version), version)
 
 	return &ReadWriteCloser{
 		data:          data,
@@ -134,6 +137,8 @@ func CreateDuplex(name string, blockCount, blockSize uint64) (*ReadWriteCloser, 
 				*(*uint64)(&block.Next), *(*uint64)(&block.Prev) = j+1, j-1
 			}
 		}
+
+		atomic.StoreUint64((*uint64)(&shared.Version), version)
 	}
 
 	return &ReadWriteCloser{
