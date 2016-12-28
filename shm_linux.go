@@ -43,7 +43,7 @@ func shmOpen(name string, flag int, perm os.FileMode) (*os.File, error) {
 	return os.NewFile(uintptr(fd), fileName), nil
 }
 
-func Unlink(name string) error {
+func shmUnlink(name string) error {
 	for len(name) != 0 && name[0] == '/' {
 		name = name[1:]
 	}
