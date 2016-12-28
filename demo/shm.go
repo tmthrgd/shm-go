@@ -19,6 +19,7 @@ import (
 	"syscall"
 
 	"github.com/tmthrgd/shm-go"
+	shmNet "github.com/tmthrgd/shm-go/net"
 )
 
 const shmName = "/shm-go"
@@ -163,7 +164,7 @@ func main() {
 				fmt.Fprintf(w, "Hello, %q\n", html.EscapeString(r.URL.Path))
 			})
 
-			ln := shm.NewListener(rw, shmName)
+			ln := shmNet.NewListener(rw, shmName)
 
 			go func() {
 				// TODO(tmthrgd): More efficiant shared memory http server
@@ -177,7 +178,7 @@ func main() {
 
 			tr := &http.Transport{
 				Dial: func(n, a string) (net.Conn, error) {
-					return shm.NewDialer(rw, shmName).Dial("shm", shmName)
+					return shmNet.NewDialer(rw, shmName).Dial("shm", shmName)
 				},
 			}
 

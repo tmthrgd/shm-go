@@ -1,13 +1,15 @@
-package shm
+package net
 
 import (
 	"net"
 	"sync"
 	"time"
+
+	"github.com/tmthrgd/shm-go"
 )
 
 type Conn struct {
-	*ReadWriteCloser
+	*shm.ReadWriteCloser
 	name string
 
 	mut *sync.Mutex

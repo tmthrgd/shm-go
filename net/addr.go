@@ -1,4 +1,4 @@
-package shm
+package net
 
 type addr string
 

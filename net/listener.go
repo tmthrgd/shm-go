@@ -1,19 +1,21 @@
-package shm
+package net
 
 import (
 	"net"
 	"sync"
+
+	"github.com/tmthrgd/shm-go"
 )
 
 type Listener struct {
-	rw   *ReadWriteCloser
+	rw   *shm.ReadWriteCloser
 	name string
 
 	mut sync.Mutex
 }
 
 func Listen(name string, blockCount, blockSize uint64) (*Listener, error) {
-	rw, err := CreateDuplex(name, blockCount, blockSize)
+	rw, err := shm.CreateDuplex(name, blockCount, blockSize)
 	if err != nil {
 		return nil, err
 	}
@@ -24,7 +26,7 @@ func Listen(name string, blockCount, blockSize uint64) (*Listener, error) {
 	}, nil
 }
 
-func NewListener(rw *ReadWriteCloser, name string) *Listener {
+func NewListener(rw *shm.ReadWriteCloser, name string) *Listener {
 	return &Listener{
 		rw:   rw,
 		name: name,

@@ -1,20 +1,22 @@
-package shm
+package net
 
 import (
 	"errors"
 	"net"
 	"sync"
+
+	"github.com/tmthrgd/shm-go"
 )
 
 type Dialer struct {
-	rw   *ReadWriteCloser
+	rw   *shm.ReadWriteCloser
 	name string
 
 	mut sync.Mutex
 }
 
 func Dial(name string) (net.Conn, error) {
-	rw, err := OpenDuplex(name)
+	rw, err := shm.OpenDuplex(name)
 	if err != nil {
 		return nil, err
 	}
@@ -25,7 +27,7 @@ func Dial(name string) (net.Conn, error) {
 	}).Dial("shm", name)
 }
 
-func NewDialer(rw *ReadWriteCloser, name string) *Dialer {
+func NewDialer(rw *shm.ReadWriteCloser, name string) *Dialer {
 	return &Dialer{
 		rw:   rw,
 		name: name,
