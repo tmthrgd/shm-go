@@ -35,12 +35,6 @@ func must(name string, err error) {
 	}
 }
 
-func should(name string, err error) {
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s failed with err: %v\n", name, err)
-	}
-}
-
 func main() {
 	var role string
 	flag.StringVar(&role, "role", "server", "server/client")
