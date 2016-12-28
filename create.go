@@ -14,7 +14,7 @@ import (
 	"github.com/tmthrgd/go-sem"
 )
 
-func CreateSimplex(name string, perm os.FileMode, blockCount, blockSize uint64) (*ReadWriteCloser, error) {
+func CreateSimplex(name string, perm os.FileMode, blockCount, blockSize int) (*ReadWriteCloser, error) {
 	if blockSize&0x3f != 0 {
 		return nil, ErrNotMultipleOf64
 	}
@@ -26,8 +26,8 @@ func CreateSimplex(name string, perm os.FileMode, blockCount, blockSize uint64) 
 
 	defer file.Close()
 
-	fullBlockSize := blockHeaderSize + blockSize
-	size := sharedHeaderSize + fullBlockSize*blockCount
+	fullBlockSize := blockHeaderSize + uint64(blockSize)
+	size := sharedHeaderSize + fullBlockSize*uint64(blockCount)
 
 	if err = file.Truncate(int64(size)); err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func CreateSimplex(name string, perm os.FileMode, blockCount, blockSize uint64) 
 	 *	shared.block[i].Size = 0
 	 *	shared.block[i].DoneRead, shared.block[i].DoneWrite = 0, 0
 	 */
-	*(*uint64)(&shared.BlockCount), *(*uint64)(&shared.BlockSize) = blockCount, blockSize
+	*(*uint64)(&shared.BlockCount), *(*uint64)(&shared.BlockSize) = uint64(blockCount), uint64(blockSize)
 
 	if err = ((*sem.Semaphore)(&shared.SemSignal)).Init(0); err != nil {
 		return nil, err
@@ -57,14 +57,14 @@ func CreateSimplex(name string, perm os.FileMode, blockCount, blockSize uint64) 
 		return nil, err
 	}
 
-	for i := uint64(0); i < blockCount; i++ {
+	for i := uint64(0); i < uint64(blockCount); i++ {
 		block := (*sharedBlock)(unsafe.Pointer(&data[sharedHeaderSize+i*fullBlockSize]))
 
 		switch i {
 		case 0:
-			block.Next, *(*uint64)(&block.Prev) = 1, blockCount-1
-		case blockCount - 1:
-			block.Next, *(*uint64)(&block.Prev) = 0, blockCount-2
+			block.Next, *(*uint64)(&block.Prev) = 1, uint64(blockCount-1)
+		case uint64(blockCount - 1):
+			block.Next, *(*uint64)(&block.Prev) = 0, uint64(blockCount-2)
 		default:
 			*(*uint64)(&block.Next), *(*uint64)(&block.Prev) = i+1, i-1
 		}
@@ -81,7 +81,7 @@ func CreateSimplex(name string, perm os.FileMode, blockCount, blockSize uint64) 
 	}, nil
 }
 
-func CreateDuplex(name string, perm os.FileMode, blockCount, blockSize uint64) (*ReadWriteCloser, error) {
+func CreateDuplex(name string, perm os.FileMode, blockCount, blockSize int) (*ReadWriteCloser, error) {
 	if blockSize&0x3f != 0 {
 		return nil, ErrNotMultipleOf64
 	}
@@ -93,8 +93,8 @@ func CreateDuplex(name string, perm os.FileMode, blockCount, blockSize uint64) (
 
 	defer file.Close()
 
-	fullBlockSize := blockHeaderSize + blockSize
-	sharedSize := sharedHeaderSize + fullBlockSize*blockCount
+	fullBlockSize := blockHeaderSize + uint64(blockSize)
+	sharedSize := sharedHeaderSize + fullBlockSize*uint64(blockCount)
 	size := 2 * sharedSize
 
 	if err = file.Truncate(int64(size)); err != nil {
@@ -116,7 +116,7 @@ func CreateDuplex(name string, perm os.FileMode, blockCount, blockSize uint64) (
 		 *	shared.Blocks[i].Size = 0
 		 *	shared.Blocks[i].DoneRead, shared.Blocks[i].DoneWrite = 0, 0
 		 */
-		*(*uint64)(&shared.BlockCount), *(*uint64)(&shared.BlockSize) = blockCount, blockSize
+		*(*uint64)(&shared.BlockCount), *(*uint64)(&shared.BlockSize) = uint64(blockCount), uint64(blockSize)
 
 		if err = ((*sem.Semaphore)(&shared.SemSignal)).Init(0); err != nil {
 			return nil, err
@@ -126,14 +126,14 @@ func CreateDuplex(name string, perm os.FileMode, blockCount, blockSize uint64) (
 			return nil, err
 		}
 
-		for j := uint64(0); j < blockCount; j++ {
+		for j := uint64(0); j < uint64(blockCount); j++ {
 			block := (*sharedBlock)(unsafe.Pointer(&data[i*sharedSize+sharedHeaderSize+j*fullBlockSize]))
 
 			switch j {
 			case 0:
-				block.Next, *(*uint64)(&block.Prev) = 1, blockCount-1
-			case blockCount - 1:
-				block.Next, *(*uint64)(&block.Prev) = 0, blockCount-2
+				block.Next, *(*uint64)(&block.Prev) = 1, uint64(blockCount-1)
+			case uint64(blockCount - 1):
+				block.Next, *(*uint64)(&block.Prev) = 0, uint64(blockCount-2)
 			default:
 				*(*uint64)(&block.Next), *(*uint64)(&block.Prev) = j+1, j-1
 			}

@@ -20,7 +20,7 @@ type Listener struct {
 	mut sync.Mutex
 }
 
-func Listen(name string, perm os.FileMode, blockCount, blockSize uint64) (*Listener, error) {
+func Listen(name string, perm os.FileMode, blockCount, blockSize int) (*Listener, error) {
 	rw, err := shm.CreateDuplex(name, perm, blockCount, blockSize)
 	if err != nil {
 		return nil, err
