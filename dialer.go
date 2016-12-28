@@ -1,4 +1,4 @@
-package main
+package shm
 
 import (
 	"errors"
@@ -15,7 +15,6 @@ type Dialer struct {
 
 func Dial(name string) (net.Conn, error) {
 	rw, err := OpenDuplex(name)
-
 	if err != nil {
 		return nil, err
 	}
@@ -43,6 +42,5 @@ func (d *Dialer) Dial(network, address string) (net.Conn, error) {
 	}
 
 	d.mut.Lock()
-
 	return &Conn{d.rw, d.name, &d.mut}, nil
 }

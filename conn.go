@@ -1,4 +1,4 @@
-package main
+package shm
 
 import (
 	"net"
@@ -19,11 +19,11 @@ func (c *Conn) Close() error {
 }
 
 func (c *Conn) LocalAddr() net.Addr {
-	return Addr(c.name)
+	return addr(c.name)
 }
 
 func (c *Conn) RemoteAddr() net.Addr {
-	return Addr(c.name)
+	return addr(c.name)
 }
 
 func (c *Conn) SetDeadline(t time.Time) error {

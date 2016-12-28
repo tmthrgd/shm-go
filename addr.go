@@ -1,11 +1,11 @@
-package main
+package shm
 
-type Addr string
+type addr string
 
-func (Addr) Network() string {
+func (addr) Network() string {
 	return "shm"
 }
 
-func (a Addr) String() string {
+func (a addr) String() string {
 	return string(a)
 }

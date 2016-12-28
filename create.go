@@ -1,91 +1,70 @@
-package main
-
-/*
-#include <stdlib.h>          // For free
-#include <string.h>          // For memset
-#include <fcntl.h>           // For O_* constants
-#include <sys/stat.h>        // For mode constants
-#include <sys/mman.h>        // For shm_*
-
-#include "structs.h"
-*/
-import "C"
+package shm
 
 import (
-	"fmt"
 	"golang.org/x/sys/unix"
-	"os"
 	"unsafe"
+
+	"github.com/tmthrgd/go-sem"
 )
 
-func CreateSimplex(name string, blockCount, blockSize int64) (*ReadWriteCloser, error) {
+func CreateSimplex(name string, blockCount, blockSize uint64) (*ReadWriteCloser, error) {
 	if blockSize&0x3f != 0 {
-		return nil, errNotMultipleOf64
+		return nil, ErrNotMultipleOf64
 	}
 
-	nameC := C.CString(name)
-	defer C.free(unsafe.Pointer(nameC))
-
-	fd, err := C.shm_open(nameC, C.O_CREAT|C.O_EXCL|C.O_TRUNC|C.O_RDWR, 0644)
-
+	file, err := shmOpen(name, unix.O_CREAT|unix.O_EXCL|unix.O_TRUNC|unix.O_RDWR, 0644)
 	if err != nil {
 		return nil, err
 	}
 
-	defer unix.Close(int(fd))
+	defer file.Close()
 
-	fullBlockSize := blockHeaderSize + uintptr(blockSize)
-	size := sharedHeaderSize + fullBlockSize*uintptr(blockCount)
+	fullBlockSize := blockHeaderSize + blockSize
+	size := sharedHeaderSize + fullBlockSize*blockCount
 
-	if err = unix.Ftruncate(int(fd), int64(size)); err != nil {
+	if err = file.Truncate(int64(size)); err != nil {
 		return nil, err
 	}
 
-	addr, err := C.mmap(nil, C.size_t(size), C.PROT_READ|C.PROT_WRITE, C.MAP_SHARED, fd, 0)
-
+	data, err := unix.Mmap(int(file.Fd()), 0, int(size), unix.PROT_READ|unix.PROT_WRITE, unix.MAP_SHARED)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Fprintf(os.Stderr, "mmap mapped %d bytes to %p\n", size, addr)
-
-	if _, err = C.memset(addr, 0, C.size_t(size)); err != nil {
-		return nil, err
-	}
-
-	shared := (*C.shared_mem_t)(addr)
+	shared := (*sharedMem)(unsafe.Pointer(&data[0]))
 
 	/*
 	 * memset already set:
-	 *	shared.read_start, shared.read_end = 0, 0
-	 *	shared.write_start, shared.write_end = 0, 0
-	 *	block[i].size = 0
-	 *	block[i].done_read, block[i].done_write = 0, 0
+	 *	shared.ReadStart, shared.ReadEnd = 0, 0
+	 *	shared.WriteStart, shared.WriteEnd = 0, 0
+	 *	shared.block[i].Size = 0
+	 *	shared.block[i].DoneRead, shared.block[i].DoneWrite = 0, 0
 	 */
-	shared.block_count, shared.block_size = C.ulonglong(blockCount), C.ulonglong(blockSize)
+	*(*uint64)(&shared.BlockCount), *(*uint64)(&shared.BlockSize) = blockCount, blockSize
 
-	if err = sem_init(&shared.sem_signal, true, 0); err != nil {
+	if err = ((*sem.Semaphore)(&shared.SemSignal)).Init(0); err != nil {
 		return nil, err
 	}
 
-	if err = sem_init(&shared.sem_avail, true, 0); err != nil {
+	if err = ((*sem.Semaphore)(&shared.SemAvail)).Init(0); err != nil {
 		return nil, err
 	}
 
-	for i := int64(0); i < blockCount; i++ {
-		block := (*C.shared_block_t)(unsafe.Pointer(uintptr(addr) + sharedHeaderSize + uintptr(i)*fullBlockSize))
+	for i := uint64(0); i < blockCount; i++ {
+		block := (*sharedBlock)(unsafe.Pointer(uintptr(unsafe.Pointer(&data[0])) + sharedHeaderSize + uintptr(i*fullBlockSize)))
 
 		switch i {
 		case 0:
-			block.next, block.prev = 1, C.ulonglong(blockCount-1)
+			block.Next, *(*uint64)(&block.Prev) = 1, blockCount-1
 		case blockCount - 1:
-			block.next, block.prev = 0, C.ulonglong(blockCount-2)
+			block.Next, *(*uint64)(&block.Prev) = 0, blockCount-2
 		default:
-			block.next, block.prev = C.ulonglong(i+1), C.ulonglong(i-1)
+			*(*uint64)(&block.Next), *(*uint64)(&block.Prev) = i+1, i-1
 		}
 	}
 
 	return &ReadWriteCloser{
+		data:          data,
 		readShared:    shared,
 		writeShared:   shared,
 		size:          size,
@@ -93,79 +72,69 @@ func CreateSimplex(name string, blockCount, blockSize int64) (*ReadWriteCloser, 
 	}, nil
 }
 
-func CreateDuplex(name string, blockCount, blockSize int64) (*ReadWriteCloser, error) {
+func CreateDuplex(name string, blockCount, blockSize uint64) (*ReadWriteCloser, error) {
 	if blockSize&0x3f != 0 {
-		return nil, errNotMultipleOf64
+		return nil, ErrNotMultipleOf64
 	}
 
-	nameC := C.CString(name)
-	defer C.free(unsafe.Pointer(nameC))
-
-	fd, err := C.shm_open(nameC, C.O_CREAT|C.O_EXCL|C.O_TRUNC|C.O_RDWR, 0644)
-
+	file, err := shmOpen(name, unix.O_CREAT|unix.O_EXCL|unix.O_TRUNC|unix.O_RDWR, 0644)
 	if err != nil {
 		return nil, err
 	}
 
-	defer unix.Close(int(fd))
+	defer file.Close()
 
-	fullBlockSize := blockHeaderSize + uintptr(blockSize)
-	sharedSize := sharedHeaderSize + fullBlockSize*uintptr(blockCount)
+	fullBlockSize := blockHeaderSize + blockSize
+	sharedSize := sharedHeaderSize + fullBlockSize*blockCount
 	size := 2 * sharedSize
 
-	if err = unix.Ftruncate(int(fd), int64(size)); err != nil {
+	if err = file.Truncate(int64(size)); err != nil {
 		return nil, err
 	}
 
-	addr, err := C.mmap(nil, C.size_t(size), C.PROT_READ|C.PROT_WRITE, C.MAP_SHARED, fd, 0)
-
+	data, err := unix.Mmap(int(file.Fd()), 0, int(size), unix.PROT_READ|unix.PROT_WRITE, unix.MAP_SHARED)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Fprintf(os.Stderr, "mmap mapped %d bytes to %p\n", size, addr)
-
-	if _, err = C.memset(addr, 0, C.size_t(size)); err != nil {
-		return nil, err
-	}
-
-	for i := 0; i < 2; i++ {
-		shared := (*C.shared_mem_t)(unsafe.Pointer(uintptr(addr) + uintptr(i)*sharedSize))
+	for i := uint64(0); i < 2; i++ {
+		shared := (*sharedMem)(unsafe.Pointer(uintptr(unsafe.Pointer(&data[0])) + uintptr(i*sharedSize)))
 
 		/*
 		 * memset already set:
-		 *	shared.read_start, shared.read_end = 0, 0
-		 *	shared.write_start, shared.write_end = 0, 0
-		 *	shared.blocks[i].size = 0
-		 *	shared.blocks[i].done_read, shared.blocks[i].done_write = 0, 0
+		 *	shared.ReadStart, shared.ReadEnd = 0, 0
+		 *	shared.WriteStart, shared.WriteEnd = 0, 0
+		 *	shared.Blocks[i].Size = 0
+		 *	shared.Blocks[i].DoneRead, shared.Blocks[i].DoneWrite = 0, 0
 		 */
-		shared.block_count, shared.block_size = C.ulonglong(blockCount), C.ulonglong(blockSize)
+		*(*uint64)(&shared.BlockCount), *(*uint64)(&shared.BlockSize) = blockCount, blockSize
 
-		if err = sem_init(&shared.sem_signal, true, 0); err != nil {
+		if err = ((*sem.Semaphore)(&shared.SemSignal)).Init(0); err != nil {
 			return nil, err
 		}
 
-		if err = sem_init(&shared.sem_avail, true, 0); err != nil {
+		if err = ((*sem.Semaphore)(&shared.SemAvail)).Init(0); err != nil {
 			return nil, err
 		}
 
-		for j := int64(0); j < blockCount; j++ {
-			block := (*C.shared_block_t)(unsafe.Pointer(uintptr(unsafe.Pointer(shared)) + sharedHeaderSize + uintptr(j)*fullBlockSize))
+		for j := uint64(0); j < blockCount; j++ {
+			block := (*sharedBlock)(unsafe.Pointer(uintptr(unsafe.Pointer(shared)) + sharedHeaderSize + uintptr(j*fullBlockSize)))
 
 			switch j {
 			case 0:
-				block.next, block.prev = 1, C.ulonglong(blockCount-1)
+				block.Next, *(*uint64)(&block.Prev) = 1, blockCount-1
 			case blockCount - 1:
-				block.next, block.prev = 0, C.ulonglong(blockCount-2)
+				block.Next, *(*uint64)(&block.Prev) = 0, blockCount-2
 			default:
-				block.next, block.prev = C.ulonglong(j+1), C.ulonglong(j-1)
+				*(*uint64)(&block.Next), *(*uint64)(&block.Prev) = j+1, j-1
 			}
 		}
 	}
 
 	return &ReadWriteCloser{
-		readShared:    (*C.shared_mem_t)(addr),
-		writeShared:   (*C.shared_mem_t)(unsafe.Pointer(uintptr(addr) + sharedSize)),
+		data:          data,
+		readShared:    (*sharedMem)(unsafe.Pointer(&data[0])),
+		writeShared:   (*sharedMem)(unsafe.Pointer(uintptr(unsafe.Pointer(&data[0])) + uintptr(sharedSize))),
 		size:          size,
 		fullBlockSize: fullBlockSize,
 	}, nil

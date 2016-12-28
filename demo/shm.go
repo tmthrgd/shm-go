@@ -1,16 +1,8 @@
 package main
 
-/*
-#cgo LDFLAGS: -lrt
-
-#include "structs.h"
-*/
-import "C"
-
 import (
 	"crypto/aes"
 	"encoding/binary"
-	"errors"
 	"flag"
 	"fmt"
 	"golang.org/x/crypto/ssh/terminal"
@@ -25,18 +17,8 @@ import (
 	"os/signal"
 	"runtime/pprof"
 	"syscall"
-	"unsafe"
-)
 
-const (
-	sharedHeaderSize = unsafe.Sizeof(C.shared_mem_t{})
-	blockHeaderSize  = unsafe.Sizeof(C.shared_block_t{})
-	blockFlagsSize   = len(C.shared_block_t{}.flags)
-)
-
-var (
-	errNotMultipleOf64   = errors.New("blockSize is not a multiple of 64")
-	errInvalidBlockIndex = errors.New("invalid block index")
+	"github.com/tmthrgd/shm-go"
 )
 
 const shmName = "/shm-go"
@@ -87,7 +69,7 @@ func main() {
 	}
 
 	if unlink {
-		must("Unlink", Unlink(shmName))
+		must("Unlink", shm.Unlink(shmName))
 		return
 	}
 
@@ -103,7 +85,7 @@ func main() {
 		done := make(chan struct{})
 
 		if isServer {
-			rw, err := CreateDuplex(shmName, 1024, 8192)
+			rw, err := shm.CreateDuplex(shmName, 1024, 8192)
 			must("Create", err)
 			closer = rw
 
@@ -114,7 +96,7 @@ func main() {
 				}
 			}()
 		} else {
-			rw, err := OpenDuplex(shmName)
+			rw, err := shm.OpenDuplex(shmName)
 			must("Open", err)
 			closer = rw
 
@@ -161,7 +143,7 @@ func main() {
 		must("closer.Close", closer.Close())
 
 		if isServer {
-			must("Unlink", Unlink(shmName))
+			must("Unlink", shm.Unlink(shmName))
 		}
 	case httpdemo:
 		var closer io.Closer
@@ -169,7 +151,7 @@ func main() {
 		done := make(chan struct{})
 
 		if isServer {
-			rw, err := CreateDuplex(shmName, 1024, 8192)
+			rw, err := shm.CreateDuplex(shmName, 1024, 8192)
 			must("Create", err)
 			closer = rw
 
@@ -181,7 +163,7 @@ func main() {
 				fmt.Fprintf(w, "Hello, %q\n", html.EscapeString(r.URL.Path))
 			})
 
-			ln := NewListener(rw, shmName)
+			ln := shm.NewListener(rw, shmName)
 
 			go func() {
 				// TODO(tmthrgd): More efficiant shared memory http server
@@ -189,13 +171,13 @@ func main() {
 			}()
 
 		} else {
-			rw, err := OpenDuplex(shmName)
+			rw, err := shm.OpenDuplex(shmName)
 			must("OpenDuplex", err)
 			closer = rw
 
 			tr := &http.Transport{
 				Dial: func(n, a string) (net.Conn, error) {
-					return NewDialer(rw, shmName).Dial("shm", shmName)
+					return shm.NewDialer(rw, shmName).Dial("shm", shmName)
 				},
 			}
 
@@ -253,11 +235,11 @@ func main() {
 		must("closer.Close", closer.Close())
 
 		if isServer {
-			must("Unlink", Unlink(shmName))
+			must("Unlink", shm.Unlink(shmName))
 		}
 	case noop:
 		if isServer {
-			reader, err := CreateSimplex(shmName, 1024, 8192)
+			reader, err := shm.CreateSimplex(shmName, 1024, 8192)
 			must("Create", err)
 
 			go func() {
@@ -276,9 +258,9 @@ func main() {
 			<-c
 
 			must("reader.Close", reader.Close())
-			must("Unlink", Unlink(shmName))
+			must("Unlink", shm.Unlink(shmName))
 		} else {
-			writer, err := OpenSimplex(shmName)
+			writer, err := shm.OpenSimplex(shmName)
 			must("Open", err)
 
 			for i := 0; i < num; {
@@ -306,7 +288,7 @@ func main() {
 		castagnoli := crc32.MakeTable(crc32.Castagnoli)
 
 		if isServer {
-			reader, err := CreateSimplex(shmName, 1024, 8192)
+			reader, err := shm.CreateSimplex(shmName, 1024, 8192)
 			must("Create", err)
 
 			go func() {
@@ -339,9 +321,9 @@ func main() {
 			<-c
 
 			must("reader.Close", reader.Close())
-			must("Unlink", Unlink(shmName))
+			must("Unlink", shm.Unlink(shmName))
 		} else {
-			writer, err := OpenSimplex(shmName)
+			writer, err := shm.OpenSimplex(shmName)
 			must("Open", err)
 
 			for i := 0; i < len(block); i += 4 {
@@ -378,7 +360,7 @@ func main() {
 		}
 	default:
 		if isServer {
-			reader, err := CreateSimplex(shmName, 1024, 8192)
+			reader, err := shm.CreateSimplex(shmName, 1024, 8192)
 			must("Create", err)
 
 			go func() {
@@ -395,9 +377,9 @@ func main() {
 			<-c
 
 			must("reader.Close", reader.Close())
-			must("Unlink", Unlink(shmName))
+			must("Unlink", shm.Unlink(shmName))
 		} else {
-			writer, err := OpenSimplex(shmName)
+			writer, err := shm.OpenSimplex(shmName)
 			must("Open", err)
 
 			_, err = io.Copy(writer, os.Stdin)

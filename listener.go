@@ -1,4 +1,4 @@
-package main
+package shm
 
 import (
 	"net"
@@ -12,9 +12,8 @@ type Listener struct {
 	mut sync.Mutex
 }
 
-func Listen(name string, blockCount, blockSize int64) (*Listener, error) {
+func Listen(name string, blockCount, blockSize uint64) (*Listener, error) {
 	rw, err := CreateDuplex(name, blockCount, blockSize)
-
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +33,6 @@ func NewListener(rw *ReadWriteCloser, name string) *Listener {
 
 func (l *Listener) Accept() (net.Conn, error) {
 	l.mut.Lock()
-
 	return &Conn{l.rw, l.name, &l.mut}, nil
 }
 
@@ -43,5 +41,5 @@ func (l *Listener) Close() error {
 }
 
 func (l *Listener) Addr() net.Addr {
-	return Addr(l.name)
+	return addr(l.name)
 }

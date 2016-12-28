@@ -1,60 +1,40 @@
-package main
-
-/*
-#cgo LDFLAGS: -lrt
-
-#include <stdlib.h>          // For free
-#include <fcntl.h>           // For O_* constants
-#include <sys/stat.h>        // For mode constants
-#include <sys/mman.h>        // For shm_*
-
-#include "structs.h"
-*/
-import "C"
+package shm
 
 import (
-	"fmt"
 	"golang.org/x/sys/unix"
-	"os"
 	"unsafe"
 )
 
 func OpenSimplex(name string) (*ReadWriteCloser, error) {
-	shmName := C.CString(name)
-	defer C.free(unsafe.Pointer(shmName))
-
-	fd, err := C.shm_open(shmName, C.O_RDWR, 0)
-
+	file, err := shmOpen(name, unix.O_RDWR, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	defer unix.Close(int(fd))
+	defer file.Close()
 
-	addr, err := C.mmap(nil, C.size_t(sharedHeaderSize), C.PROT_READ, C.MAP_SHARED, fd, 0)
-
+	data, err := unix.Mmap(int(file.Fd()), 0, sharedHeaderSize, unix.PROT_READ, unix.MAP_SHARED)
 	if err != nil {
 		return nil, err
 	}
 
-	shared := (*C.shared_mem_t)(addr)
-	blockCount, blockSize := uintptr(shared.block_count), uintptr(shared.block_size)
+	shared := (*sharedMem)(unsafe.Pointer(&data[0]))
+	blockCount, blockSize := uint64(shared.BlockCount), uint64(shared.BlockSize)
 
-	if _, err = C.munmap(addr, C.size_t(sharedHeaderSize)); err != nil {
+	if err = unix.Munmap(data); err != nil {
 		return nil, err
 	}
 
 	size := sharedHeaderSize + (blockHeaderSize+blockSize)*blockCount
-	addr, err = C.mmap(nil, C.size_t(size), C.PROT_READ|C.PROT_WRITE, C.MAP_SHARED, fd, 0)
 
+	data, err = unix.Mmap(int(file.Fd()), 0, int(size), unix.PROT_READ|unix.PROT_WRITE, unix.MAP_SHARED)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Fprintf(os.Stderr, "mmap mapped %d bytes to %p\n", size, addr)
-
-	shared = (*C.shared_mem_t)(addr)
+	shared = (*sharedMem)(unsafe.Pointer(&data[0]))
 	return &ReadWriteCloser{
+		data:          data,
 		readShared:    shared,
 		writeShared:   shared,
 		size:          size,
@@ -63,44 +43,37 @@ func OpenSimplex(name string) (*ReadWriteCloser, error) {
 }
 
 func OpenDuplex(name string) (*ReadWriteCloser, error) {
-	shmName := C.CString(name)
-	defer C.free(unsafe.Pointer(shmName))
-
-	fd, err := C.shm_open(shmName, C.O_RDWR, 0)
-
+	file, err := shmOpen(name, unix.O_RDWR, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	defer unix.Close(int(fd))
+	defer file.Close()
 
-	addr, err := C.mmap(nil, C.size_t(sharedHeaderSize), C.PROT_READ, C.MAP_SHARED, fd, 0)
-
+	data, err := unix.Mmap(int(file.Fd()), 0, sharedHeaderSize, unix.PROT_READ, unix.MAP_SHARED)
 	if err != nil {
 		return nil, err
 	}
 
-	shared := (*C.shared_mem_t)(unsafe.Pointer(addr))
-	blockCount, blockSize := uintptr(shared.block_count), uintptr(shared.block_size)
+	shared := (*sharedMem)(unsafe.Pointer(&data[0]))
+	blockCount, blockSize := uint64(shared.BlockCount), uint64(shared.BlockSize)
 
-	if _, err = C.munmap(addr, C.size_t(sharedHeaderSize)); err != nil {
+	if err = unix.Munmap(data); err != nil {
 		return nil, err
 	}
 
 	sharedSize := sharedHeaderSize + (blockHeaderSize+blockSize)*blockCount
 	size := 2 * sharedSize
 
-	addr, err = C.mmap(nil, C.size_t(size), C.PROT_READ|C.PROT_WRITE, C.MAP_SHARED, fd, 0)
-
+	data, err = unix.Mmap(int(file.Fd()), 0, int(size), unix.PROT_READ|unix.PROT_WRITE, unix.MAP_SHARED)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Fprintf(os.Stderr, "mmap mapped %d bytes to %p\n", size, addr)
-
 	return &ReadWriteCloser{
-		readShared:    (*C.shared_mem_t)(unsafe.Pointer(uintptr(addr) + sharedSize)),
-		writeShared:   (*C.shared_mem_t)(addr),
+		data:          data,
+		readShared:    (*sharedMem)(unsafe.Pointer(uintptr(unsafe.Pointer(&data[0])) + uintptr(sharedSize))),
+		writeShared:   (*sharedMem)(unsafe.Pointer(&data[0])),
 		size:          size,
 		fullBlockSize: blockHeaderSize + blockSize,
 	}, nil
