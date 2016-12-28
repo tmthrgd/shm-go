@@ -51,7 +51,6 @@ func (rw *ReadWriteCloser) Close() error {
 
 func (rw *ReadWriteCloser) Read(p []byte) (n int, err error) {
 	buf, err := rw.GetReadBuffer()
-
 	if err != nil {
 		return 0, err
 	}
@@ -73,7 +72,6 @@ func (rw *ReadWriteCloser) Read(p []byte) (n int, err error) {
 func (rw *ReadWriteCloser) WriteTo(w io.Writer) (n int64, err error) {
 	for {
 		buf, err := rw.GetReadBuffer()
-
 		if err != nil {
 			return n, err
 		}
@@ -104,7 +102,6 @@ func (rw *ReadWriteCloser) GetReadBuffer() (Buffer, error) {
 
 	for {
 		blockIndex := atomic.LoadUint64((*uint64)(&rw.readShared.ReadStart))
-
 		if blockIndex > uint64(rw.readShared.BlockCount) {
 			return Buffer{}, ErrInvalidSharedMemory
 		}
@@ -151,7 +148,6 @@ func (rw *ReadWriteCloser) SendReadBuffer(buf Buffer) error {
 
 	for {
 		blockIndex := atomic.LoadUint64((*uint64)(&rw.readShared.ReadEnd))
-
 		if blockIndex > uint64(rw.readShared.BlockCount) {
 			return ErrInvalidSharedMemory
 		}
@@ -176,7 +172,6 @@ func (rw *ReadWriteCloser) SendReadBuffer(buf Buffer) error {
 
 func (rw *ReadWriteCloser) Write(p []byte) (n int, err error) {
 	buf, err := rw.GetWriteBuffer()
-
 	if err != nil {
 		return 0, err
 	}
@@ -193,7 +188,6 @@ func (rw *ReadWriteCloser) Write(p []byte) (n int, err error) {
 func (rw *ReadWriteCloser) ReadFrom(r io.Reader) (n int64, err error) {
 	for {
 		buf, err := rw.GetWriteBuffer()
-
 		if err != nil {
 			return n, err
 		}
@@ -231,7 +225,6 @@ func (rw *ReadWriteCloser) GetWriteBuffer() (Buffer, error) {
 
 	for {
 		blockIndex := atomic.LoadUint64((*uint64)(&rw.writeShared.WriteStart))
-
 		if blockIndex > uint64(rw.writeShared.BlockCount) {
 			return Buffer{}, ErrInvalidSharedMemory
 		}
@@ -281,7 +274,6 @@ func (rw *ReadWriteCloser) SendWriteBuffer(buf Buffer) (n int, err error) {
 
 	for {
 		blockIndex := atomic.LoadUint64((*uint64)(&rw.writeShared.WriteEnd))
-
 		if blockIndex > uint64(rw.writeShared.BlockCount) {
 			return len(buf.Data), ErrInvalidSharedMemory
 		}
