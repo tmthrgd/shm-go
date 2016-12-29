@@ -45,6 +45,8 @@ func OpenSimplex(name string) (*ReadWriteCloser, error) {
 
 	shared = (*sharedMem)(unsafe.Pointer(&data[0]))
 	return &ReadWriteCloser{
+		name: name,
+
 		data:          data,
 		readShared:    shared,
 		writeShared:   shared,
@@ -87,6 +89,8 @@ func OpenDuplex(name string) (*ReadWriteCloser, error) {
 	}
 
 	return &ReadWriteCloser{
+		name: name,
+
 		data:          data,
 		readShared:    (*sharedMem)(unsafe.Pointer(&data[sharedSize])),
 		writeShared:   (*sharedMem)(unsafe.Pointer(&data[0])),

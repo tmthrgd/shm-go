@@ -73,6 +73,8 @@ func CreateSimplex(name string, perm os.FileMode, blockCount, blockSize int) (*R
 	atomic.StoreUint32((*uint32)(&shared.Version), version)
 
 	return &ReadWriteCloser{
+		name: name,
+
 		data:          data,
 		readShared:    shared,
 		writeShared:   shared,
@@ -143,6 +145,8 @@ func CreateDuplex(name string, perm os.FileMode, blockCount, blockSize int) (*Re
 	}
 
 	return &ReadWriteCloser{
+		name: name,
+
 		data:          data,
 		readShared:    (*sharedMem)(unsafe.Pointer(&data[0])),
 		writeShared:   (*sharedMem)(unsafe.Pointer(&data[sharedSize])),

@@ -28,6 +28,8 @@ type Buffer struct {
 }
 
 type ReadWriteCloser struct {
+	name string
+
 	data          []byte
 	readShared    *sharedMem
 	writeShared   *sharedMem
@@ -45,6 +47,27 @@ func (rw *ReadWriteCloser) Close() error {
 	// finish all sends before close!
 
 	return unix.Munmap(rw.data)
+}
+
+// Name returns the name of the shared memory.
+func (rw *ReadWriteCloser) Name() string {
+	return rw.name
+}
+
+// Unlink removes the shared memory.
+//
+// It is the equivalent to calling Unlink(string) with
+// the same name as Create* or Open*.
+//
+// Taken from shm_unlink(3):
+// 	The  operation  of shm_unlink() is analogous to unlink(2): it removes a
+// 	shared memory object name, and, once all processes  have  unmapped  the
+// 	object, de-allocates and destroys the contents of the associated memory
+// 	region.  After a successful shm_unlink(),  attempts  to  shm_open()  an
+// 	object  with  the same name will fail (unless O_CREAT was specified, in
+// 	which case a new, distinct object is created).
+func (rw *ReadWriteCloser) Unlink() error {
+	return Unlink(rw.name)
 }
 
 // Read
