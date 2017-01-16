@@ -43,7 +43,7 @@ typedef struct {
 	sem_t SemSignal;
 	sem_t SemAvail;
 
-	uint8_t __padding2[(0x40-(4*2*sizeof(uint32_t)+sizeof(uint64_t)+2*sizeof(sem_t))&0x3f)&0x3f];
+	uint32_t Flags[((0x40-(4*2*sizeof(uint32_t)+sizeof(uint64_t)+2*sizeof(sem_t))&0x3f)&0x3f)/4];
 
 	shared_block_t Blocks[];
 } shared_mem_t;
@@ -56,6 +56,7 @@ type sharedMem C.shared_mem_t
 
 const (
 	sharedHeaderSize = C.sizeof_shared_mem_t
+	sharedFlagsSize  = len(sharedMem{}.Flags)
 	blockHeaderSize  = C.sizeof_shared_block_t
 	blockFlagsSize   = len(sharedBlock{}.Flags)
 

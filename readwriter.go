@@ -36,6 +36,9 @@ type ReadWriteCloser struct {
 	size          uint64
 	fullBlockSize uint64
 
+	// Must be accessed using atomic operations
+	Flags *[sharedFlagsSize]uint32
+
 	closed uint32
 }
 

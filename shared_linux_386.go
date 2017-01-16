@@ -24,11 +24,12 @@ type sharedMem struct {
 	WriteEnd    uint32
 	SemSignal   [16]byte
 	SemAvail    [16]byte
-	X__padding2 [56]uint8
+	Flags       [14]uint32
 }
 
 const (
 	sharedHeaderSize = 0x80
+	sharedFlagsSize  = len(sharedMem{}.Flags)
 	blockHeaderSize  = 0x40
 	blockFlagsSize   = len(sharedBlock{}.Flags)
 

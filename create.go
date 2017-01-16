@@ -80,6 +80,8 @@ func CreateSimplex(name string, perm os.FileMode, blockCount, blockSize int) (*R
 		writeShared:   shared,
 		size:          size,
 		fullBlockSize: fullBlockSize,
+
+		Flags: (*[len(shared.Flags)]uint32)(unsafe.Pointer(&shared.Flags[0])),
 	}, nil
 }
 
@@ -153,5 +155,7 @@ func CreateDuplex(name string, perm os.FileMode, blockCount, blockSize int) (*Re
 		writeShared:   (*sharedMem)(unsafe.Pointer(&data[sharedSize])),
 		size:          size,
 		fullBlockSize: fullBlockSize,
+
+		Flags: (*[len(readShared.Flags)]uint32)(unsafe.Pointer(&readShared.Flags[0])),
 	}, nil
 }
