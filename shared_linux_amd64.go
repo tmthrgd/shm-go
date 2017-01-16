@@ -4,26 +4,27 @@
 package shm
 
 type sharedBlock struct {
-	Next      uint64
-	Prev      uint64
-	DoneRead  uint64
-	DoneWrite uint64
+	Next      uint32
+	Prev      uint32
+	DoneRead  uint32
+	DoneWrite uint32
 	Size      uint64
-	Flags     [24]uint8
+	Flags     [40]uint8
 }
 
 type sharedMem struct {
 	Version     uint32
 	X__padding0 uint32
-	BlockCount  uint64
+	BlockCount  uint32
+	X__padding1 uint32
 	BlockSize   uint64
-	ReadStart   uint64
-	ReadEnd     uint64
-	WriteStart  uint64
-	WriteEnd    uint64
+	ReadStart   uint32
+	ReadEnd     uint32
+	WriteStart  uint32
+	WriteEnd    uint32
 	SemSignal   [32]byte
 	SemAvail    [32]byte
-	X__padding1 [8]uint8
+	X__padding2 [24]uint8
 }
 
 const (

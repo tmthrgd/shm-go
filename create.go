@@ -47,7 +47,7 @@ func CreateSimplex(name string, perm os.FileMode, blockCount, blockSize int) (*R
 	 *	shared.block[i].Size = 0
 	 *	shared.block[i].DoneRead, shared.block[i].DoneWrite = 0, 0
 	 */
-	*(*uint64)(&shared.BlockCount), *(*uint64)(&shared.BlockSize) = uint64(blockCount), uint64(blockSize)
+	*(*uint32)(&shared.BlockCount), *(*uint64)(&shared.BlockSize) = uint32(blockCount), uint64(blockSize)
 
 	if err = ((*sem.Semaphore)(&shared.SemSignal)).Init(0); err != nil {
 		return nil, err
@@ -57,16 +57,16 @@ func CreateSimplex(name string, perm os.FileMode, blockCount, blockSize int) (*R
 		return nil, err
 	}
 
-	for i := uint64(0); i < uint64(blockCount); i++ {
-		block := (*sharedBlock)(unsafe.Pointer(&data[sharedHeaderSize+i*fullBlockSize]))
+	for i := uint32(0); i < uint32(blockCount); i++ {
+		block := (*sharedBlock)(unsafe.Pointer(&data[sharedHeaderSize+uint64(i)*fullBlockSize]))
 
 		switch i {
 		case 0:
-			block.Next, *(*uint64)(&block.Prev) = 1, uint64(blockCount-1)
-		case uint64(blockCount - 1):
-			block.Next, *(*uint64)(&block.Prev) = 0, uint64(blockCount-2)
+			block.Next, *(*uint32)(&block.Prev) = 1, uint32(blockCount-1)
+		case uint32(blockCount - 1):
+			block.Next, *(*uint32)(&block.Prev) = 0, uint32(blockCount-2)
 		default:
-			*(*uint64)(&block.Next), *(*uint64)(&block.Prev) = i+1, i-1
+			*(*uint32)(&block.Next), *(*uint32)(&block.Prev) = i+1, i-1
 		}
 	}
 
@@ -118,7 +118,7 @@ func CreateDuplex(name string, perm os.FileMode, blockCount, blockSize int) (*Re
 		 *	shared.Blocks[i].Size = 0
 		 *	shared.Blocks[i].DoneRead, shared.Blocks[i].DoneWrite = 0, 0
 		 */
-		*(*uint64)(&shared.BlockCount), *(*uint64)(&shared.BlockSize) = uint64(blockCount), uint64(blockSize)
+		*(*uint32)(&shared.BlockCount), *(*uint64)(&shared.BlockSize) = uint32(blockCount), uint64(blockSize)
 
 		if err = ((*sem.Semaphore)(&shared.SemSignal)).Init(0); err != nil {
 			return nil, err
@@ -128,16 +128,16 @@ func CreateDuplex(name string, perm os.FileMode, blockCount, blockSize int) (*Re
 			return nil, err
 		}
 
-		for j := uint64(0); j < uint64(blockCount); j++ {
-			block := (*sharedBlock)(unsafe.Pointer(&data[i*sharedSize+sharedHeaderSize+j*fullBlockSize]))
+		for j := uint32(0); j < uint32(blockCount); j++ {
+			block := (*sharedBlock)(unsafe.Pointer(&data[i*sharedSize+sharedHeaderSize+uint64(j)*fullBlockSize]))
 
 			switch j {
 			case 0:
-				block.Next, *(*uint64)(&block.Prev) = 1, uint64(blockCount-1)
-			case uint64(blockCount - 1):
-				block.Next, *(*uint64)(&block.Prev) = 0, uint64(blockCount-2)
+				block.Next, *(*uint32)(&block.Prev) = 1, uint32(blockCount-1)
+			case uint32(blockCount - 1):
+				block.Next, *(*uint32)(&block.Prev) = 0, uint32(blockCount-2)
 			default:
-				*(*uint64)(&block.Next), *(*uint64)(&block.Prev) = j+1, j-1
+				*(*uint32)(&block.Next), *(*uint32)(&block.Prev) = j+1, j-1
 			}
 		}
 
