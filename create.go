@@ -140,15 +140,16 @@ func CreateDuplex(name string, perm os.FileMode, blockCount, blockSize int) (*Re
 				*(*uint32)(&block.Next), *(*uint32)(&block.Prev) = j+1, j-1
 			}
 		}
-
-		atomic.StoreUint32((*uint32)(&shared.Version), version)
 	}
+
+	readShared := (*sharedMem)(unsafe.Pointer(&data[0]))
+	atomic.StoreUint32((*uint32)(&readShared.Version), version)
 
 	return &ReadWriteCloser{
 		name: name,
 
 		data:          data,
-		readShared:    (*sharedMem)(unsafe.Pointer(&data[0])),
+		readShared:    readShared,
 		writeShared:   (*sharedMem)(unsafe.Pointer(&data[sharedSize])),
 		size:          size,
 		fullBlockSize: fullBlockSize,
