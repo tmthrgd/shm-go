@@ -5,7 +5,11 @@
 
 package shm
 
-import "os"
+import (
+	"os"
+
+	"github.com/tmthrgd/go-shm"
+)
 
 // Unlink removes the previously created blocker.
 //
@@ -17,9 +21,5 @@ import "os"
 // 	object  with  the same name will fail (unless O_CREAT was specified, in
 // 	which case a new, distinct object is created).
 func Unlink(name string) error {
-	if err := shmUnlink(name); err != nil {
-		return &os.PathError{Op: "unlink", Path: name, Err: err}
-	}
-
-	return nil
+	return shm.Unlink(name)
 }

@@ -9,10 +9,12 @@ import (
 	"golang.org/x/sys/unix"
 	"sync/atomic"
 	"unsafe"
+
+	"github.com/tmthrgd/go-shm"
 )
 
 func OpenSimplex(name string) (*ReadWriteCloser, error) {
-	file, err := shmOpen(name, unix.O_RDWR, 0)
+	file, err := shm.Open(name, unix.O_RDWR, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +60,7 @@ func OpenSimplex(name string) (*ReadWriteCloser, error) {
 }
 
 func OpenDuplex(name string) (*ReadWriteCloser, error) {
-	file, err := shmOpen(name, unix.O_RDWR, 0)
+	file, err := shm.Open(name, unix.O_RDWR, 0)
 	if err != nil {
 		return nil, err
 	}

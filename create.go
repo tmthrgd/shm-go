@@ -12,6 +12,7 @@ import (
 	"unsafe"
 
 	"github.com/tmthrgd/go-sem"
+	"github.com/tmthrgd/go-shm"
 )
 
 func CreateSimplex(name string, perm os.FileMode, blockCount, blockSize int) (*ReadWriteCloser, error) {
@@ -19,9 +20,9 @@ func CreateSimplex(name string, perm os.FileMode, blockCount, blockSize int) (*R
 		return nil, ErrNotMultipleOf64
 	}
 
-	file, err := shmOpen(name, unix.O_CREAT|unix.O_EXCL|unix.O_TRUNC|unix.O_RDWR, perm)
+	file, err := shm.Open(name, unix.O_CREAT|unix.O_EXCL|unix.O_TRUNC|unix.O_RDWR, perm)
 	if err != nil {
-		return nil, &os.PathError{Op: "open", Path: name, Err: err}
+		return nil, err
 	}
 
 	defer file.Close()
@@ -90,9 +91,9 @@ func CreateDuplex(name string, perm os.FileMode, blockCount, blockSize int) (*Re
 		return nil, ErrNotMultipleOf64
 	}
 
-	file, err := shmOpen(name, unix.O_CREAT|unix.O_EXCL|unix.O_TRUNC|unix.O_RDWR, perm)
+	file, err := shm.Open(name, unix.O_CREAT|unix.O_EXCL|unix.O_TRUNC|unix.O_RDWR, perm)
 	if err != nil {
-		return nil, &os.PathError{Op: "open", Path: name, Err: err}
+		return nil, err
 	}
 
 	defer file.Close()
