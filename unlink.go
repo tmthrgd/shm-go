@@ -5,11 +5,7 @@
 
 package shm
 
-import (
-	"os"
-
-	"github.com/tmthrgd/go-shm"
-)
+import "github.com/tmthrgd/go-shm"
 
 // Unlink removes the previously created blocker.
 //
