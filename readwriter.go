@@ -166,7 +166,7 @@ func (rw *ReadWriteCloser) SendReadBuffer(buf Buffer) error {
 		return ErrInvalidBuffer
 	}
 
-	var block *sharedBlock = buf.block
+	block := buf.block
 
 	atomic.StoreUint32((*uint32)(&block.DoneRead), 1)
 
@@ -290,7 +290,7 @@ func (rw *ReadWriteCloser) SendWriteBuffer(buf Buffer) (n int, err error) {
 		return 0, ErrInvalidBuffer
 	}
 
-	var block *sharedBlock = buf.block
+	block := buf.block
 
 	*(*uint64)(&block.Size) = uint64(len(buf.Data))
 
